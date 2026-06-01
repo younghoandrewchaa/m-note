@@ -18,8 +18,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  version-bump:
+  changes:
     if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      has_code_changes: ${{ steps.filter.outputs.has_code_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          CODE_CHANGES=$(echo "$CHANGED" | grep -v '^package\.json$' | grep -v '^package-lock\.json$' | head -1)
+          if [ -n "$CODE_CHANGES" ]; then
+            echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_code_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  version-bump:
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.has_code_changes == 'true'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -53,8 +73,11 @@ jobs:
           git push --tags
 
   build:
-    needs: version-bump
-    if: always() && (needs.version-bump.result == 'success' || needs.version-bump.result == 'skipped')
+    needs: [changes, version-bump]
+    if: >-
+      always() &&
+      (needs.changes.outputs.has_code_changes == 'true' || github.event_name == 'workflow_dispatch') &&
+      (needs.version-bump.result == 'success' || needs.version-bump.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
