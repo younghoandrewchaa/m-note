@@ -74,11 +74,47 @@
     margin-top: 1.5em;
     margin-bottom: 1.5em;
 
-    select {
+    .code-block-controls {
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
       z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .code-block-copy-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0;
+      background-color: var(--tt-codeblock-select-bg);
+      color: var(--tt-codeblock-select-text);
+      border: 1px solid var(--tt-codeblock-select-border);
+      border-radius: var(--tt-radius-sm);
+      cursor: pointer;
+      outline: none;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--tt-codeblock-text);
+        border-color: var(--tt-brand-color-400);
+      }
+
+      &:focus-visible {
+        border-color: var(--tt-brand-color-400);
+      }
+    }
+
+    .code-block-copy-icon {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+
+    select {
       appearance: none;
       background-color: var(--tt-codeblock-select-bg);
       color: var(--tt-codeblock-select-text);
@@ -97,7 +133,7 @@
 
     pre {
       margin: 0;
-      padding-right: 6rem;
+      padding-right: 8rem;
     }
   }
 
