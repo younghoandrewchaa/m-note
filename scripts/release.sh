@@ -45,18 +45,20 @@ echo "==> Pushing to remote..."
 git push
 git push --tags
 
-# --- Publish to GitHub ---
+# --- Build changelog ---
 TAG="v${NEW_VERSION}"
+PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+if [ -n "$PREV_TAG" ]; then
+  NOTES=$(git log "$PREV_TAG".."$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+else
+  NOTES=$(git log "$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+fi
+
+# --- Publish to GitHub ---
 echo "==> Creating GitHub release $TAG..."
 gh release create "$TAG" "$DMG_PATH" \
   --title "$APP_NAME $TAG" \
-  --generate-notes
-
-# Prepend Windows SmartScreen note to the release body
-EXISTING_BODY=$(gh release view "$TAG" --json body -q .body)
-gh release edit "$TAG" --notes "> **Windows users:** The Windows installer is not code-signed yet. SmartScreen may show a warning — click **\"More info\"** → **\"Run anyway\"** to proceed.
-
-${EXISTING_BODY}"
+  --notes "$NOTES"
 
 echo ""
 echo "Released $APP_NAME $TAG"

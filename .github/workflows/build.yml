@@ -143,6 +143,20 @@ jobs:
           APPLE_TEAM_ID: ${{ matrix.platform == 'darwin' && secrets.APPLE_TEAM_ID || '' }}
         run: npx electron-forge publish
 
+      - name: Update release notes with changelog
+        if: matrix.platform == 'darwin'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log "$PREV_TAG".."$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+          else
+            NOTES=$(git log "$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+          fi
+          gh release edit "$TAG" --notes "$NOTES"
+
       # - name: Add Windows SmartScreen note to release
       #   if: matrix.platform == 'win32' && github.ref_type == 'tag'
       #   env:

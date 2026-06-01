@@ -18,8 +18,14 @@ git push
 git push --tags
 
 echo "==> Creating GitHub release $TAG..."
+PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+if [ -n "$PREV_TAG" ]; then
+  NOTES=$(git log "$PREV_TAG".."$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+else
+  NOTES=$(git log "$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+fi
 gh release create "$TAG" "$DMG_PATH" \
   --title "M Note $TAG" \
-  --generate-notes
+  --notes "$NOTES"
 
 echo "==> Released: $(gh release view "$TAG" --json url -q .url)"
