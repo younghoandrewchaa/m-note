@@ -9,10 +9,8 @@
     "start": "electron-forge start",
     "lint": "eslint --ext .ts,.tsx .",
     "icon": "sh scripts/generate-icon.sh",
-    "version:bump": "npm version patch --no-git-tag-version",
-    "version:commit": "git add package.json package-lock.json && git commit -m \"v$(node -p \"require('./package.json').version\")\" && git tag \"v$(node -p \"require('./package.json').version\")\"",
     "build:dmg": "sh scripts/build-dmg.sh",
-    "release": "sh scripts/release-github.sh",
+    "release": "sh scripts/release.sh",
     "test": "vitest run"
   },
   "keywords": [],

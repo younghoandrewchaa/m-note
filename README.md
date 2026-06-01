@@ -30,18 +30,21 @@ npm start
 
 ```bash
 npm run release
+# or with a custom release note:
+npm run release -- "What's new in this release"
 ```
 
-Requires a clean working tree and the [GitHub CLI](https://cli.github.com/) (`gh`).
+Requires a clean working tree.
 
-Runs the full release pipeline in sequence:
+Runs locally and triggers CI to build and publish:
 
-1. **Preflight** — checks `gh` is installed and there are no uncommitted changes
-2. **Version bump** — `npm version patch --no-git-tag-version` increments the patch number in `package.json` / `package-lock.json`
+1. **Preflight** — checks there are no uncommitted changes
+2. **Version bump** — increments the patch number in `package.json` / `package-lock.json`
 3. **Commit & tag** — commits the version files and creates a `vX.Y.Z` git tag
-4. **Build DMG** (`scripts/build-dmg.sh`) — generates the app icon if missing, cleans `out/`, runs Electron Forge (`npm run make -- --targets @electron-forge/maker-dmg`), and verifies the `.dmg` exists
-5. **Push** — pushes the commit and tag to the remote
-6. **GitHub Release** — `gh release create` uploads the DMG and publishes with auto-generated notes
+4. **Push** — pushes the commit and tag to remote, which triggers the CI workflow
+5. **CI** — builds the signed/notarized DMG and publishes the GitHub release
+
+If a release note is passed, it becomes the GitHub release body verbatim. Otherwise CI auto-generates notes from the git commit log since the previous tag.
 
 ### Build DMG (local only)
 

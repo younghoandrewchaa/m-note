@@ -18,66 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  changes:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    outputs:
-      has_code_changes: ${{ steps.filter.outputs.has_code_changes }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: filter
-        run: |
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          CODE_CHANGES=$(echo "$CHANGED" | grep -v '^package\.json$' | grep -v '^package-lock\.json$' | head -1)
-          if [ -n "$CODE_CHANGES" ]; then
-            echo "has_code_changes=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_code_changes=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  version-bump:
-    needs: changes
-    if: github.event_name == 'push' && needs.changes.outputs.has_code_changes == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump patch version
-        run: npm version patch --no-git-tag-version
-
-      - name: Get new version
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Commit and tag version bump
-        run: |
-          git add package.json package-lock.json
-          git commit -m "v${{ steps.version.outputs.version }} [skip ci]"
-          git tag "v${{ steps.version.outputs.version }}"
-          git push
-          git push --tags
-
   build:
-    needs: [changes, version-bump]
-    if: >-
-      always() &&
-      (needs.changes.outputs.has_code_changes == 'true' || github.event_name == 'workflow_dispatch') &&
-      (needs.version-bump.result == 'success' || needs.version-bump.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -92,8 +33,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -149,24 +88,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v$(node -p "require('./package.json').version")"
-          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log "$PREV_TAG".."$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+          ANNOTATION=$(git tag -l --format='%(contents)' "$TAG" | sed '/^$/d')
+          if [ -n "$ANNOTATION" ]; then
+            NOTES="$ANNOTATION"
           else
-            NOTES=$(git log "$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+            PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+            if [ -n "$PREV_TAG" ]; then
+              NOTES=$(git log "$PREV_TAG".."$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+            else
+              NOTES=$(git log "$TAG" --no-merges --invert-grep --grep='^v[0-9]' --format='- %s')
+            fi
           fi
           gh release edit "$TAG" --notes "$NOTES"
-
-      # - name: Add Windows SmartScreen note to release
-      #   if: matrix.platform == 'win32' && github.ref_type == 'tag'
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #     TAG="${GITHUB_REF_NAME}"
-      #     EXISTING_BODY=$(gh release view "$TAG" --json body -q .body 2>/dev/null || echo "")
-      #     gh release edit "$TAG" --notes "> **Windows users:** The Windows installer is not code-signed yet. SmartScreen may show a warning — click **\"More info\"** → **\"Run anyway\"** to proceed.
-      #
-      #     ${EXISTING_BODY}"
 
       - name: Cleanup macOS keychain
         if: matrix.platform == 'darwin' && always()
