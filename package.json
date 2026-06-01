@@ -1,7 +1,7 @@
 {
   "name": "m-note",
   "productName": "M Note",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "private": true,
