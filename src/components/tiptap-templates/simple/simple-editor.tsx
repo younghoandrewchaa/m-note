@@ -217,7 +217,11 @@ export function SimpleEditor() {
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const [updateInfo, setUpdateInfo] = useState<{ version: string; downloadUrl: string } | null>(null)
+  const [updateInfo, setUpdateInfo] = useState<
+    | { type: 'manual'; version: string; downloadUrl: string }
+    | { type: 'native'; releaseName: string; updateUrl: string }
+    | null
+  >(null)
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const currentFilePathRef = useRef<string | null>(null)
@@ -333,7 +337,14 @@ export function SimpleEditor() {
   useEffect(() => {
     if (!window.electronAPI) return
     window.electronAPI.checkForUpdate().then((info) => {
-      if (info) setUpdateInfo(info)
+      if (info) setUpdateInfo({ type: 'manual', ...info })
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!window.electronAPI) return
+    return window.electronAPI.onUpdateDownloaded((info) => {
+      setUpdateInfo({ type: 'native', ...info })
     })
   }, [])
 
@@ -355,7 +366,7 @@ export function SimpleEditor() {
       isDirtyRef.current = false
       document.title = filePath.split('/').pop() ?? filePath
       window.electronAPI.checkForUpdate().then((info) => {
-        if (info) setUpdateInfo(info)
+        if (info) setUpdateInfo({ type: 'manual', ...info })
       })
     })
     return unsubscribe
@@ -408,12 +419,22 @@ export function SimpleEditor() {
     <div className="simple-editor-wrapper">
       {updateInfo && (
         <div className="update-banner">
-          <span>M Note v{updateInfo.version} is available.</span>
+          <span>
+            {updateInfo.type === 'native'
+              ? `${updateInfo.releaseName || 'A new M Note update'} is ready to install.`
+              : `M Note v${updateInfo.version} is available.`}
+          </span>
           <button
             className="update-banner-link"
-            onClick={() => window.electronAPI?.openExternal(updateInfo.downloadUrl)}
+            onClick={() => {
+              if (updateInfo.type === 'native') {
+                window.electronAPI?.installUpdate()
+              } else {
+                window.electronAPI?.openExternal(updateInfo.downloadUrl)
+              }
+            }}
           >
-            Download
+            {updateInfo.type === 'native' ? 'Restart' : 'Download'}
           </button>
           <button
             className="update-banner-dismiss"

@@ -15,6 +15,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdate: (): Promise<{ version: string; downloadUrl: string } | null> => {
     return ipcRenderer.invoke('check-for-update');
   },
+  onUpdateDownloaded: (callback: (info: { releaseName: string; updateUrl: string }) => void) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      info: { releaseName: string; updateUrl: string },
+    ) => callback(info);
+    ipcRenderer.on('auto-update-downloaded', listener);
+    return () => ipcRenderer.removeListener('auto-update-downloaded', listener);
+  },
+  installUpdate: (): Promise<void> => {
+    return ipcRenderer.invoke('install-update');
+  },
   openExternal: (url: string): Promise<void> => {
     return ipcRenderer.invoke('open-external', url);
   },

@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, screen, session, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { checkForNativeUpdate, configureAutoUpdater, installNativeUpdate } from './auto-updater';
 import { checkForUpdate } from './update-checker';
 import { attachCloseHandler } from './window-close-handler';
 
@@ -33,7 +34,12 @@ ipcMain.handle('save-file', async (_, filePath: string, content: string) => {
   await fs.promises.writeFile(filePath, content, 'utf-8');
 });
 
-ipcMain.handle('check-for-update', () => checkForUpdate());
+ipcMain.handle('check-for-update', () => {
+  if (checkForNativeUpdate()) return null;
+  return checkForUpdate();
+});
+
+ipcMain.handle('install-update', () => installNativeUpdate());
 
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url));
 
@@ -97,6 +103,14 @@ const createWindow = (filePath?: string) => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   appReady = true;
+  configureAutoUpdater({
+    isPackaged: app.isPackaged,
+    notifyRenderer: (channel, info) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send(channel, info);
+      }
+    },
+  });
 
   // Pick up file paths passed as CLI arguments (dev workflow only).
   // The open-file event is not emitted for argv — only for Apple Events from

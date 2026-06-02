@@ -37,7 +37,13 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin']),
+    new MakerZIP(
+      {
+        macUpdateManifestBaseUrl:
+          'https://github.com/younghoandrewchaa/m-note/releases/latest/download',
+      },
+      ['darwin'],
+    ),
     new MakerDMG({ format: 'ULFO' }),
     new MakerRpm({}),
     new MakerDeb({}),
