@@ -119,6 +119,23 @@ body,
   padding: 3rem 3rem 30vh;
 }
 
+.version-label {
+  position: fixed;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  font-family: var(--tt-font-body);
+  font-size: 0.6875rem;
+  color: var(--tt-gray-light-400);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  opacity: 0.6;
+
+  .dark & {
+    color: var(--tt-gray-dark-400);
+  }
+}
+
 @media screen and (max-width: 480px) {
   .simple-editor-content .tiptap.ProseMirror.simple-editor {
     padding: 1rem 1.5rem 30vh;

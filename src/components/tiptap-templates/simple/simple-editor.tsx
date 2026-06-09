@@ -480,6 +480,7 @@ export function SimpleEditor() {
           className="simple-editor-content"
         />
       </EditorContext.Provider>
+      <span className="version-label">v{__APP_VERSION__}</span>
     </div>
   )
 }
