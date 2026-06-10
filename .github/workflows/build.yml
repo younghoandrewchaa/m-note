@@ -1,13 +1,16 @@
 name: Build and Release
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
+  # Releases are now built locally via `npm run release` (scripts/release-local.sh).
+  # The push trigger is disabled so this workflow no longer fires on every push to
+  # main. It can still be run manually from the Actions tab as a fallback.
+  # push:
+  #   branches:
+  #     - main
+  #   paths-ignore:
+  #     - '**.md'
+  #     - 'LICENSE'
+  #     - '.gitignore'
   workflow_dispatch:
 
 permissions:
