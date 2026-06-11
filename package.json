@@ -10,6 +10,7 @@
     "lint": "eslint --ext .ts,.tsx .",
     "icon": "sh scripts/generate-icon.sh",
     "build:dmg": "sh scripts/build-dmg.sh",
+    "patch": "npm version patch -m 'chore(release): %s'",
     "release": "sh scripts/release.sh",
     "test": "vitest run"
   },
