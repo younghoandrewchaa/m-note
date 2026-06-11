@@ -67,14 +67,21 @@ if ! release_exists; then
   fi
 fi
 
-# --- Build DMG + update ZIP (skip if a DMG already exists for this version) ---
+# --- Build DMG + update ZIP (skip only if both DMG and manifest already exist) ---
 # The DMG is the manual download; the maker-zip target produces the signed .zip
 # plus a RELEASES.json manifest (because forge.config.ts sets
 # macUpdateManifestBaseUrl) that Squirrel.Mac native auto-update fetches.
+#
+# Run `make` with NO --targets: passing --targets makes electron-forge resolve
+# makers by name and fall back to a default instance on a miss, bypassing the
+# configured MakerZIP (and its macUpdateManifestBaseUrl) so no RELEASES.json is
+# produced. A plain `make` uses the configured makers; on darwin only DMG + ZIP
+# apply, so this yields DMG + ZIP + RELEASES.json.
 DMG_PATH=$(find out/make -maxdepth 3 -name "*${VERSION}*.dmg" 2>/dev/null | head -1)
+EXISTING_MANIFEST=$(find out/make/zip -maxdepth 4 -name 'RELEASES.json' 2>/dev/null | head -1)
 
-if [ -n "$DMG_PATH" ]; then
-  echo "==> DMG already built: $DMG_PATH (skipping build)"
+if [ -n "$DMG_PATH" ] && [ -n "$EXISTING_MANIFEST" ]; then
+  echo "==> DMG and RELEASES.json already built (skipping build)"
 else
   if [ ! -f resources/icon.icns ]; then
     echo "==> Generating icon..."
@@ -83,7 +90,7 @@ else
 
   echo "==> Building signed + notarised DMG and update ZIP for ${TAG}..."
   rm -rf out/
-  npx electron-forge make --targets @electron-forge/maker-dmg,@electron-forge/maker-zip
+  npx electron-forge make
 
   DMG_PATH=$(find out/make -maxdepth 3 -name "*${VERSION}*.dmg" 2>/dev/null | head -1)
   if [ -z "$DMG_PATH" ]; then
