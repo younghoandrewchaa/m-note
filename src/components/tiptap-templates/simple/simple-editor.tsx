@@ -17,6 +17,9 @@ import { Selection } from "@tiptap/extensions"
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table"
 import { Markdown } from "@tiptap/markdown"
 
+// --- Tiptap Extension ---
+import { Search } from "@/components/tiptap-extension/search-extension"
+
 // --- UI Primitives ---
 import { Button } from "@/components/tiptap-ui-primitive/button"
 import { Spacer } from "@/components/tiptap-ui-primitive/spacer"
@@ -64,6 +67,7 @@ import {
 import { MarkButton } from "@/components/tiptap-ui/mark-button"
 import { TextAlignButton } from "@/components/tiptap-ui/text-align-button"
 import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button"
+import { SearchPanel } from "@/components/tiptap-ui/search-panel"
 
 // --- Icons ---
 import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon"
@@ -271,6 +275,7 @@ export function SimpleEditor() {
         onError: (error) => console.error("Upload failed:", error),
       }),
       Markdown,
+      Search,
     ],
     content: "",
   })
@@ -473,6 +478,8 @@ export function SimpleEditor() {
             />
           )}
         </Toolbar>
+
+        <SearchPanel editor={editor} />
 
         <EditorContent
           editor={editor}

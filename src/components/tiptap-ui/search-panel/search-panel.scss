@@ -1,0 +1,56 @@
+@import "@/styles/variables";
+@import "@/styles/keyframe-animations";
+
+.search-panel {
+  position: fixed;
+  top: calc(44px + 0.5rem); // toolbar height + spacing
+  right: 1rem;
+  z-index: 51; // Above toolbar (z-index: 50)
+  animation: slideFromTop var(--tt-transition-duration-default) var(--tt-transition-easing-default),
+             fadeIn var(--tt-transition-duration-default) var(--tt-transition-easing-default);
+
+  .tiptap-card {
+    box-shadow: var(--tt-shadow-elevated-md);
+  }
+
+  .tiptap-card-item-group {
+    gap: 0.25rem;
+  }
+}
+
+.search-panel-input {
+  font-size: 0.875rem;
+  border: none;
+  min-width: 14rem;
+  padding: 0.25rem 0.5rem;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.search-panel-count {
+  font-size: 0.75rem;
+  color: var(--tt-gray-light-500);
+  white-space: nowrap;
+  padding: 0 0.5rem;
+  min-width: 5rem;
+  text-align: center;
+  user-select: none;
+
+  .dark & {
+    color: var(--tt-gray-dark-500);
+  }
+}
+
+// Search result highlights in editor content
+.search-result {
+  background-color: var(--tt-color-highlight-yellow);
+  border-radius: 2px;
+}
+
+.search-result-current {
+  background-color: var(--tt-color-highlight-orange-contrast);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(224, 124, 57, 0.3);
+}
