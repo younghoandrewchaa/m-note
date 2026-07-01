@@ -90,8 +90,23 @@ export const Search = Extension.create<Record<string, never>, SearchStorage>({
             editor
               .chain()
               .setTextSelection({ from: match.from, to: match.to })
-              .scrollIntoView()
               .run()
+
+            // Manual scroll since ProseMirror's scrollIntoView() fails when focus is outside editor
+            const coords = editor.view.coordsAtPos(match.from)
+            const wrapper = editor.view.dom.closest('.simple-editor-wrapper') as HTMLElement | null
+            if (wrapper) {
+              const wrapperRect = wrapper.getBoundingClientRect()
+              const TOOLBAR_HEIGHT = 60 // toolbar + search panel
+              const BOTTOM_MARGIN = 40
+
+              if (coords.top < wrapperRect.top + TOOLBAR_HEIGHT || coords.top > wrapperRect.bottom - BOTTOM_MARGIN) {
+                wrapper.scrollBy({
+                  top: coords.top - wrapperRect.top - wrapperRect.height / 3,
+                  behavior: 'smooth'
+                })
+              }
+            }
           }
 
           return true
@@ -112,8 +127,23 @@ export const Search = Extension.create<Record<string, never>, SearchStorage>({
             editor
               .chain()
               .setTextSelection({ from: match.from, to: match.to })
-              .scrollIntoView()
               .run()
+
+            // Manual scroll since ProseMirror's scrollIntoView() fails when focus is outside editor
+            const coords = editor.view.coordsAtPos(match.from)
+            const wrapper = editor.view.dom.closest('.simple-editor-wrapper') as HTMLElement | null
+            if (wrapper) {
+              const wrapperRect = wrapper.getBoundingClientRect()
+              const TOOLBAR_HEIGHT = 60 // toolbar + search panel
+              const BOTTOM_MARGIN = 40
+
+              if (coords.top < wrapperRect.top + TOOLBAR_HEIGHT || coords.top > wrapperRect.bottom - BOTTOM_MARGIN) {
+                wrapper.scrollBy({
+                  top: coords.top - wrapperRect.top - wrapperRect.height / 3,
+                  behavior: 'smooth'
+                })
+              }
+            }
           }
 
           return true
