@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, screen, session, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import { checkForNativeUpdate, configureAutoUpdater, installNativeUpdate } from './auto-updater';
+import { checkForNativeUpdate, configureAutoUpdater, hasNativeUpdateFailed, installNativeUpdate } from './auto-updater';
 import { checkForUpdate } from './update-checker';
 import { attachCloseHandler } from './window-close-handler';
 
@@ -35,7 +35,7 @@ ipcMain.handle('save-file', async (_, filePath: string, content: string) => {
 });
 
 ipcMain.handle('check-for-update', () => {
-  if (checkForNativeUpdate()) return null;
+  if (checkForNativeUpdate() && !hasNativeUpdateFailed()) return null;
   return checkForUpdate();
 });
 

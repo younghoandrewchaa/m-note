@@ -116,4 +116,29 @@ describe('auto updater', () => {
 
     expect(mockQuitAndInstall).toHaveBeenCalledOnce();
   });
+
+  it('hasNativeUpdateFailed returns false before any error occurs', async () => {
+    const { hasNativeUpdateFailed } = await import('../auto-updater');
+
+    expect(hasNativeUpdateFailed()).toBe(false);
+  });
+
+  it('sets failure flag when auto-updater errors', async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+    const { configureAutoUpdater, hasNativeUpdateFailed } = await import('../auto-updater');
+
+    configureAutoUpdater({
+      isPackaged: true,
+      notifyRenderer: mockWebContentsSend,
+    });
+    const errorListener = mockOn.mock.calls.find(([event]) => event === 'error')?.[1] as (
+      error: Error,
+    ) => void;
+
+    expect(hasNativeUpdateFailed()).toBe(false);
+
+    errorListener(new Error('Update failed'));
+
+    expect(hasNativeUpdateFailed()).toBe(true);
+  });
 });

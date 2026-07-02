@@ -15,6 +15,7 @@ const MAC_UPDATE_FEED_URL =
 
 let configured = false;
 let updateCheckStarted = false;
+let nativeUpdateFailed = false;
 
 export function configureAutoUpdater({
   isPackaged,
@@ -38,6 +39,7 @@ export function configureAutoUpdater({
 
   autoUpdater.on('error', (error) => {
     console.error('Auto update failed:', error);
+    nativeUpdateFailed = true;
   });
 
   configured = true;
@@ -54,4 +56,8 @@ export function checkForNativeUpdate(): boolean {
 
 export function installNativeUpdate(): void {
   autoUpdater.quitAndInstall();
+}
+
+export function hasNativeUpdateFailed(): boolean {
+  return nativeUpdateFailed;
 }
