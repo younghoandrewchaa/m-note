@@ -51,6 +51,7 @@ import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button"
 import { CopyMarkdownButton } from "@/components/tiptap-ui/copy-markdown-button"
 import { CopyFilePathButton } from "@/components/tiptap-ui/copy-file-path-button"
 import { SaveButton } from "@/components/tiptap-ui/save-button"
+import { CheckUpdateButton } from "@/components/tiptap-ui/check-update-button"
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button"
 import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button"
@@ -97,6 +98,7 @@ const MainToolbarContent = ({
   onSave,
   canSave,
   currentFilePath,
+  onCheckForUpdate,
 }: {
   onHighlighterClick: () => void
   onLinkClick: () => void
@@ -104,6 +106,7 @@ const MainToolbarContent = ({
   onSave: () => Promise<void>
   canSave: boolean
   currentFilePath: string | null
+  onCheckForUpdate: () => Promise<void>
 }) => {
   return (
     <>
@@ -170,6 +173,7 @@ const MainToolbarContent = ({
         <SaveButton onSave={onSave} canSave={canSave} />
         <CopyMarkdownButton />
         <CopyFilePathButton filePath={currentFilePath} />
+        <CheckUpdateButton onCheckForUpdate={onCheckForUpdate} />
       </ToolbarGroup>
 
       <Spacer />
@@ -224,6 +228,7 @@ export function SimpleEditor() {
   const [updateInfo, setUpdateInfo] = useState<
     | { type: 'manual'; version: string; downloadUrl: string }
     | { type: 'native'; releaseName: string; updateUrl: string }
+    | { type: 'none' }
     | null
   >(null)
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
@@ -299,6 +304,20 @@ export function SimpleEditor() {
     e.preventDefault()
     handleSave()
   }, { enableOnFormTags: true, enableOnContentEditable: true }, [handleSave])
+
+  const handleCheckForUpdate = useCallback(async () => {
+    if (!window.electronAPI) return
+    const info = await window.electronAPI.checkForUpdate()
+    setUpdateInfo(info ? { type: 'manual', ...info } : { type: 'none' })
+  }, [])
+
+  useEffect(() => {
+    if (updateInfo?.type !== 'none') return
+    const timeout = setTimeout(() => {
+      setUpdateInfo((current) => (current?.type === 'none' ? null : current))
+    }, 3000)
+    return () => clearTimeout(timeout)
+  }, [updateInfo])
 
   useEffect(() => {
     if (!editor) return
@@ -430,20 +449,24 @@ export function SimpleEditor() {
           <span>
             {updateInfo.type === 'native'
               ? `${updateInfo.releaseName || 'A new M Note update'} is ready to install.`
-              : `M Note v${updateInfo.version} is available.`}
+              : updateInfo.type === 'manual'
+                ? `M Note v${updateInfo.version} is available.`
+                : `You're up to date (v${__APP_VERSION__}).`}
           </span>
-          <button
-            className="update-banner-link"
-            onClick={() => {
-              if (updateInfo.type === 'native') {
-                window.electronAPI?.installUpdate()
-              } else {
-                window.electronAPI?.openExternal(updateInfo.downloadUrl)
-              }
-            }}
-          >
-            {updateInfo.type === 'native' ? 'Restart' : 'Download'}
-          </button>
+          {updateInfo.type !== 'none' && (
+            <button
+              className="update-banner-link"
+              onClick={() => {
+                if (updateInfo.type === 'native') {
+                  window.electronAPI?.installUpdate()
+                } else {
+                  window.electronAPI?.openExternal(updateInfo.downloadUrl)
+                }
+              }}
+            >
+              {updateInfo.type === 'native' ? 'Restart' : 'Download'}
+            </button>
+          )}
           <button
             className="update-banner-dismiss"
             onClick={() => setUpdateInfo(null)}
@@ -472,6 +495,7 @@ export function SimpleEditor() {
               onSave={handleSave}
               canSave={isDirty && currentFilePath !== null}
               currentFilePath={currentFilePath}
+              onCheckForUpdate={handleCheckForUpdate}
             />
           ) : (
             <MobileToolbarContent
