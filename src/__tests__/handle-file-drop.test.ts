@@ -104,4 +104,17 @@ describe('handleFileDrop', () => {
     await vi.waitFor(() => expect(callbacks.setContent).toHaveBeenCalledWith('# Empty path'));
     expect(callbacks.setFilePath).not.toHaveBeenCalled();
   });
+
+  it('checks for updates after successfully loading a dropped file', async () => {
+    const api = {
+      getFilePath: vi.fn().mockReturnValue('/Users/test/doc.md'),
+      readFile: vi.fn().mockResolvedValue({ path: '/Users/test/doc.md', content: '# Hello' }),
+      checkForUpdate: vi.fn().mockResolvedValue(null),
+    };
+    const file = new File(['# Hello'], 'doc.md', { type: 'text/markdown' });
+
+    handleFileDrop(makeFileList(file), api, callbacks);
+
+    await vi.waitFor(() => expect(api.checkForUpdate).toHaveBeenCalled());
+  });
 });

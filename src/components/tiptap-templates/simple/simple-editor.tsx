@@ -409,6 +409,9 @@ export function SimpleEditor() {
         setTitle: (name) => {
           document.title = name
         },
+        onUpdateChecked: (info) => {
+          if (info) setUpdateInfo({ type: 'manual', ...(info as { version: string; downloadUrl: string }) })
+        },
       })
     }
 
