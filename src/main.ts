@@ -5,6 +5,12 @@ import started from 'electron-squirrel-startup';
 import { checkForNativeUpdate, configureAutoUpdater, hasNativeUpdateFailed, installNativeUpdate } from './auto-updater';
 import { checkForUpdate } from './update-checker';
 import { attachCloseHandler } from './window-close-handler';
+import {
+  createDebouncedWindowBoundsWriter,
+  getDefaultWindowBounds,
+  readWindowBounds,
+  type WindowBounds,
+} from './window-state'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -55,14 +61,17 @@ ipcMain.handle('set-file-path', (event, filePath: string) => {
 });
 
 const createWindow = (filePath?: string) => {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const defaultBounds = getDefaultWindowBounds(primaryDisplay.workAreaSize)
+  const workAreas: WindowBounds[] = screen.getAllDisplays().map((display) => display.workArea)
+  const savedBounds = readWindowBounds(app.getPath('userData'), workAreas);
+  const windowBounds = savedBounds ?? defaultBounds;
+
   const { width: screenWidth, height: screenHeight } =
     screen.getPrimaryDisplay().workAreaSize;
 
   const mainWindow = new BrowserWindow({
-    x: 0,
-    y: 0,
-    width: Math.round(screenWidth / 2),
-    height: screenHeight,
+    ...windowBounds,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
