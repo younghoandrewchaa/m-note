@@ -13,6 +13,10 @@
     "plugin:import/typescript"
   ],
   "parser": "@typescript-eslint/parser",
+  "rules": {
+    "semi": ["error", "never"],
+    "@typescript-eslint/semi": ["error", "never"]
+  },
   "settings": {
     "import/resolver": {
       "typescript": {

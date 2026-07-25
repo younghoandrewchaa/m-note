@@ -122,10 +122,10 @@ describe('Search Extension Logic', () => {
   })
 
   it('handles empty search term', () => {
-    const searchTerm = ''
+    const searchTerm = [''].join('')
 
     if (!searchTerm || !searchTerm.trim()) {
-      const results = []
+      const results: unknown[] = []
       expect(results).toHaveLength(0)
     }
   })

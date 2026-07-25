@@ -4,7 +4,7 @@
  */
 export function isLocalMarkdownLink(url: string): boolean {
   if (!url) return false
-  if (/^[a-z][a-z0-9+.\-]*:/i.test(url)) return false
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return false
   return /\.(md|markdown)$/i.test(url)
 }
 

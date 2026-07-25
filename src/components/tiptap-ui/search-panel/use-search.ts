@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import type { Editor } from "@tiptap/core"
+import type { SearchStorage } from "@/components/tiptap-extension/search-extension"
 
 export interface UseSearchConfig {
   editor?: Editor | null
@@ -17,6 +18,11 @@ export interface UseSearchReturn {
   closeSearch: () => void
 }
 
+function getSearchStorage(editor: Editor): SearchStorage | null {
+  const storage = editor.storage as Editor["storage"] & { search?: SearchStorage }
+  return storage.search ?? null
+}
+
 export function useSearch(config: UseSearchConfig): UseSearchReturn {
   const { editor } = config
   const [isOpen, setIsOpen] = useState(false)
@@ -32,9 +38,10 @@ export function useSearch(config: UseSearchConfig): UseSearchReturn {
       editor.commands.setSearchTerm(searchTerm)
 
       // Read results from storage
-      if (editor.storage.search) {
-        setTotalMatches(editor.storage.search.results.length)
-        setCurrentIndex(editor.storage.search.currentIndex)
+      const searchStorage = getSearchStorage(editor)
+      if (searchStorage) {
+        setTotalMatches(searchStorage.results.length)
+        setCurrentIndex(searchStorage.currentIndex)
       }
     }, 150)
 
@@ -46,9 +53,10 @@ export function useSearch(config: UseSearchConfig): UseSearchReturn {
     if (!editor) return
 
     const updateHandler = () => {
-      if (editor.storage.search && isOpen) {
-        setTotalMatches(editor.storage.search.results.length)
-        setCurrentIndex(editor.storage.search.currentIndex)
+      const searchStorage = getSearchStorage(editor)
+      if (searchStorage && isOpen) {
+        setTotalMatches(searchStorage.results.length)
+        setCurrentIndex(searchStorage.currentIndex)
       }
     }
 
@@ -63,8 +71,9 @@ export function useSearch(config: UseSearchConfig): UseSearchReturn {
     editor.commands.nextMatch()
 
     // Update state immediately
-    if (editor.storage.search) {
-      setCurrentIndex(editor.storage.search.currentIndex)
+    const searchStorage = getSearchStorage(editor)
+    if (searchStorage) {
+      setCurrentIndex(searchStorage.currentIndex)
     }
   }, [editor])
 
@@ -73,8 +82,9 @@ export function useSearch(config: UseSearchConfig): UseSearchReturn {
     editor.commands.previousMatch()
 
     // Update state immediately
-    if (editor.storage.search) {
-      setCurrentIndex(editor.storage.search.currentIndex)
+    const searchStorage = getSearchStorage(editor)
+    if (searchStorage) {
+      setCurrentIndex(searchStorage.currentIndex)
     }
   }, [editor])
 
