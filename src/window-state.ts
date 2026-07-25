@@ -19,7 +19,6 @@ function getStateFilePath(userDataPath: string) {
 export function getDefaultWindowBounds(
   primaryWorkAreaSize: { width: number; height: number }
 ): WindowBounds {
-  const { width, height } = primaryWorkAreaSize
   return {
     x: 0,
     y: 0,
@@ -29,14 +28,14 @@ export function getDefaultWindowBounds(
 }
 
 function isFiniteBounds(value: unknown): value is WindowBounds {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<WindowBounds>;
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<WindowBounds>
   return (
     Number.isFinite(candidate.x) &&
     Number.isFinite(candidate.y) &&
     Number.isFinite(candidate.width) &&
     Number.isFinite(candidate.height)
-  );
+  )
 }
 
 function intersects(a: WindowBounds, b: WindowBounds) {
@@ -52,10 +51,10 @@ export function isValidWindowBounds(
   bounds: unknown,
   workAreas: WindowBounds[]
 ): bounds is WindowBounds {
-  if (!isFiniteBounds(bounds)) return false;
-  if (bounds.width < MIN_WIDTH || bounds.height < MIN_HEIGHT) return false;
+  if (!isFiniteBounds(bounds)) return false
+  if (bounds.width < MIN_WIDTH || bounds.height < MIN_HEIGHT) return false
 
-  return workAreas.some((workArea) => intersects(bounds, workArea));
+  return workAreas.some((workArea) => intersects(bounds, workArea))
 }
 
 export function readWindowBounds(
@@ -75,21 +74,21 @@ export function readWindowBounds(
 }
 
 export function writeWindowBounds(userDataPath: string, bounds: WindowBounds) {
-  fs.mkdirSync(userDataPath, { recursive: true });
-  fs.writeFileSync(getStateFilePath(userDataPath), JSON.stringify(bounds, null, 2), 'utf-8');
+  fs.mkdirSync(userDataPath, { recursive: true })
+  fs.writeFileSync(getStateFilePath(userDataPath), JSON.stringify(bounds, null, 2), 'utf-8')
 }
 
 export function createDebouncedWindowBoundsWriter(userDataPath: string, delayMs = 250) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  let latestBounds: WindowBounds | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  let latestBounds: WindowBounds | null = null
 
   return (bounds: WindowBounds) => {
-    latestBounds = bounds;
-    if (timeout) clearTimeout(timeout);
+    latestBounds = bounds
+    if (timeout) clearTimeout(timeout)
 
     timeout = setTimeout(() => {
-      if (latestBounds) writeWindowBounds(userDataPath, latestBounds);
-      timeout = null;
-    }, delayMs);
-  };
+      if (latestBounds) writeWindowBounds(userDataPath, latestBounds)
+      timeout = null
+    }, delayMs)
+  }
 }
