@@ -44,4 +44,4 @@ The central component. Configures all Tiptap extensions, wires up file open/save
 
 **Update checker (`src/update-checker.ts`):** Polls the GitHub releases API for `younghoandrewchaa/m-note`, compares semver, and surfaces a DMG download link.
 
-**Build:** Electron Forge with Vite plugin. Three Vite configs: `vite.main.config.ts`, `vite.preload.config.ts`, `vite.renderer.config.ts`. The app is code-signed and notarised for macOS (keychain profile `sprout-pomodoro`).
+**Build:** Electron Forge with Vite plugin. Three Vite configs: `vite.main.config.ts`, `vite.preload.config.ts`, `vite.renderer.config.ts`. The app is code-signed and notarised for macOS (keychain profile `m-note`).

@@ -21,7 +21,7 @@ const config: ForgeConfig = {
           teamId: process.env.APPLE_TEAM_ID!,
         }
       : {
-          keychainProfile: 'sprout-pomodoro',
+          keychainProfile: 'm-note',
         },
     extendInfo: {
       CFBundleDocumentTypes: [
