@@ -10,8 +10,12 @@ interface ConfigureAutoUpdaterOptions {
   notifyRenderer: (channel: 'auto-update-downloaded', info: AutoUpdateDownloadedInfo) => void
 }
 
+// Squirrel.Mac's JSON server type expects a flat { url, name, notes, pub_date }
+// object, not maker-zip's { currentRelease, releases: [...] } RELEASES.json.
+// update.json (written by scripts/fix-mac-update-manifest.mjs) is that flattened
+// feed.
 const MAC_UPDATE_FEED_URL =
-  'https://github.com/younghoandrewchaa/m-note/releases/latest/download/RELEASES.json'
+  'https://github.com/younghoandrewchaa/m-note/releases/latest/download/update.json'
 
 let configured = false
 let updateCheckStarted = false

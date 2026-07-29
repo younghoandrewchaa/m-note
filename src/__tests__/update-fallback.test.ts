@@ -76,6 +76,12 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn() },
 }))
 
+// GitHub's release API is the single source of truth for "is there an update"
+// (see update-checker.test.ts) — Squirrel.Mac can't make that call itself
+// because its feed URL is a static GitHub Releases asset that always answers
+// 200, never the 204 it needs to mean "no update". So the native updater is
+// only ever used as a download+install mechanism, triggered exclusively when
+// GitHub has already confirmed a newer version exists.
 describe('update fallback behavior', () => {
   beforeEach(async () => {
     vi.resetModules()
@@ -92,34 +98,43 @@ describe('update fallback behavior', () => {
     }
   })
 
-  it('skips manual check when native updater is active and has not failed', async () => {
+  it('always asks GitHub, even while the native updater is active', async () => {
     mockCheckForNativeUpdate.mockReturnValue(true)
     mockHasNativeUpdateFailed.mockReturnValue(false)
+    mockCheckForUpdate.mockResolvedValue(null)
 
     const result = await ipcHandlers['check-for-update']()
 
+    expect(mockCheckForUpdate).toHaveBeenCalledOnce()
     expect(result).toBeNull()
-    expect(mockCheckForUpdate).not.toHaveBeenCalled()
   })
 
-  it('falls back to manual check when native updater has failed', async () => {
-    mockCheckForNativeUpdate.mockReturnValue(true)
+  it('triggers the native download+install when GitHub reports a newer version', async () => {
+    mockHasNativeUpdateFailed.mockReturnValue(false)
+    mockCheckForUpdate.mockResolvedValue({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
+
+    const result = await ipcHandlers['check-for-update']()
+
+    expect(mockCheckForNativeUpdate).toHaveBeenCalledOnce()
+    expect(result).toEqual({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
+  })
+
+  it('does not trigger the native updater when GitHub reports no update', async () => {
+    mockCheckForUpdate.mockResolvedValue(null)
+
+    const result = await ipcHandlers['check-for-update']()
+
+    expect(mockCheckForNativeUpdate).not.toHaveBeenCalled()
+    expect(result).toBeNull()
+  })
+
+  it('does not retry the native download once it has already failed', async () => {
     mockHasNativeUpdateFailed.mockReturnValue(true)
     mockCheckForUpdate.mockResolvedValue({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
 
     const result = await ipcHandlers['check-for-update']()
 
-    expect(mockCheckForUpdate).toHaveBeenCalledOnce()
-    expect(result).toEqual({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
-  })
-
-  it('uses manual check when native updater is not active', async () => {
-    mockCheckForNativeUpdate.mockReturnValue(false)
-    mockCheckForUpdate.mockResolvedValue({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
-
-    const result = await ipcHandlers['check-for-update']()
-
-    expect(mockCheckForUpdate).toHaveBeenCalledOnce()
+    expect(mockCheckForNativeUpdate).not.toHaveBeenCalled()
     expect(result).toEqual({ version: '1.2.0', downloadUrl: 'https://example.com/MNote.dmg' })
   })
 })

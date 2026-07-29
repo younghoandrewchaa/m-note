@@ -41,9 +41,15 @@ ipcMain.handle('save-file', async (_, filePath: string, content: string) => {
   await fs.promises.writeFile(filePath, content, 'utf-8')
 })
 
-ipcMain.handle('check-for-update', () => {
-  if (checkForNativeUpdate() && !hasNativeUpdateFailed()) return null
-  return checkForUpdate()
+ipcMain.handle('check-for-update', async () => {
+  // GitHub's release API is the reliable source of truth for whether a newer
+  // version exists (see update-checker.ts). Squirrel.Mac's feed URL is a
+  // static GitHub Releases asset that always answers 200, so it can never say
+  // "no update" on its own — it's only used here to download and install a
+  // version GitHub has already confirmed is newer.
+  const info = await checkForUpdate()
+  if (info && !hasNativeUpdateFailed()) checkForNativeUpdate()
+  return info
 })
 
 ipcMain.handle('install-update', () => installNativeUpdate())

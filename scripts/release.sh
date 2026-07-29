@@ -30,9 +30,11 @@ RELEASE_NOTE="${1:-}"
 echo "==> Releasing ${TAG}"
 
 # --- Short-circuit if already fully released ---
-# A complete macOS release needs all three assets: the DMG (manual download) and
-# the .zip + RELEASES.json that Squirrel.Mac native auto-update consumes. If any
-# is missing (e.g. a prior DMG-only run), fall through and finish the upload.
+# A complete macOS release needs four assets: the DMG (manual download), the
+# .zip (what native auto-update actually downloads and installs), RELEASES.json
+# (bookkeeping maker-zip needs across runs), and update.json (the flat feed
+# Squirrel.Mac reads to decide there's an update). If any is missing (e.g. a
+# prior DMG-only run), fall through and finish the upload.
 release_exists() { gh release view "$TAG" >/dev/null 2>&1; }
 release_assets() { gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null; }
 fully_released() {
@@ -40,11 +42,12 @@ fully_released() {
   assets=$(release_assets) || return 1
   echo "$assets" | grep -qi '\.dmg$' \
     && echo "$assets" | grep -qi '\.zip$' \
-    && echo "$assets" | grep -qx 'RELEASES.json'
+    && echo "$assets" | grep -qx 'RELEASES.json' \
+    && echo "$assets" | grep -qx 'update.json'
 }
 
 if release_exists && fully_released; then
-  echo "==> ${TAG} is already released with DMG, ZIP, and RELEASES.json attached. Nothing to do."
+  echo "==> ${TAG} is already released with DMG, ZIP, RELEASES.json, and update.json attached. Nothing to do."
   echo "    Bump the version (npm version patch) to ship a new release."
   exit 0
 fi
@@ -114,8 +117,10 @@ if [ -z "$ZIP_PATH" ] || [ -z "$RELEASES_JSON" ]; then
 fi
 
 ZIP_PATH=$(node scripts/fix-mac-update-manifest.mjs "$RELEASES_JSON" "$ZIP_PATH")
+UPDATE_JSON="$(dirname "$RELEASES_JSON")/update.json"
 echo "==> Update ZIP: $ZIP_PATH"
 echo "==> Manifest:   $RELEASES_JSON"
+echo "==> Feed:       $UPDATE_JSON"
 
 # --- Tag ---
 if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
@@ -138,18 +143,19 @@ git push
 git push origin "$TAG"
 
 # --- GitHub release ---
-# Upload all three assets: DMG (manual download) + ZIP and RELEASES.json (native
-# auto-update). RELEASES.json must be served verbatim at
-# releases/latest/download/RELEASES.json for the Squirrel.Mac feed URL to resolve.
+# Upload all four assets: DMG (manual download), ZIP (native auto-update
+# payload), RELEASES.json (bookkeeping), and update.json (the flat feed
+# Squirrel.Mac fetches). update.json must be served verbatim at
+# releases/latest/download/update.json for the Squirrel.Mac feed URL to resolve.
 if release_exists; then
-  echo "==> Release ${TAG} exists; uploading DMG, ZIP, and RELEASES.json..."
-  gh release upload "$TAG" "$DMG_PATH" "$ZIP_PATH" "$RELEASES_JSON" --clobber
+  echo "==> Release ${TAG} exists; uploading DMG, ZIP, RELEASES.json, and update.json..."
+  gh release upload "$TAG" "$DMG_PATH" "$ZIP_PATH" "$RELEASES_JSON" "$UPDATE_JSON" --clobber
   if [ -n "$RELEASE_NOTE" ]; then
     gh release edit "$TAG" --notes "$RELEASE_NOTE"
   fi
 else
   echo "==> Creating GitHub release ${TAG}..."
-  gh release create "$TAG" "$DMG_PATH" "$ZIP_PATH" "$RELEASES_JSON" --title "$TAG" --notes "$RELEASE_NOTE"
+  gh release create "$TAG" "$DMG_PATH" "$ZIP_PATH" "$RELEASES_JSON" "$UPDATE_JSON" --title "$TAG" --notes "$RELEASE_NOTE"
 fi
 
 echo ""

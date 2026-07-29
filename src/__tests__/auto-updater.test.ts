@@ -44,7 +44,7 @@ describe('auto updater', () => {
 
     expect(result).toBe(true)
     expect(mockSetFeedURL).toHaveBeenCalledWith({
-      url: 'https://github.com/younghoandrewchaa/m-note/releases/latest/download/RELEASES.json',
+      url: 'https://github.com/younghoandrewchaa/m-note/releases/latest/download/update.json',
       serverType: 'json',
     })
     expect(mockOn).toHaveBeenCalledWith('update-downloaded', expect.any(Function))

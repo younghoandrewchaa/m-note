@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 //
 // Normalize a Squirrel.Mac `RELEASES.json` so its update URL matches the zip
-// asset name that GitHub will actually serve.
+// asset name that GitHub will actually serve, and derive the flat feed JSON
+// Squirrel.Mac's client actually reads at the feed URL.
 //
 // @electron-forge/maker-zip names the mac update zip after the packaged app
 // directory, e.g. "M Note-darwin-arm64-1.1.15.zip" (note the space), and writes
@@ -11,10 +12,18 @@
 // and native auto-update silently fails. This rewrites both sides to the same
 // dot-normalized name.
 //
+// Separately, maker-zip's RELEASES.json is a Squirrel.Windows-style manifest
+// ({ currentRelease, releases: [...] }), but Squirrel.Mac's JSON server type
+// expects a flat { url, name, notes, pub_date } object at the feed URL (see the
+// Squirrel.Mac README linked from Electron's FeedURLOptions docs). Pointing the
+// feed straight at RELEASES.json means Squirrel.Mac can never parse an update
+// out of it. This also writes that flattened object to update.json alongside
+// RELEASES.json, which is what auto-updater.ts's feed URL actually targets.
+//
 // Usage (from release.sh):
 //   node scripts/fix-mac-update-manifest.mjs <RELEASES.json> <zip path>
-// Renames the zip on disk, rewrites the manifest in place, and prints the
-// normalized zip path to stdout.
+// Renames the zip on disk, rewrites the manifest in place, writes
+// update.json next to it, and prints the normalized zip path to stdout.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -48,6 +57,24 @@ export function normalizeManifest(manifest, normalizedZipName) {
   return { ...manifest, releases };
 }
 
+/**
+ * Flatten a manifest's currentRelease entry into the { url, name, notes,
+ * pub_date } shape Squirrel.Mac's JSON server type expects at the feed URL.
+ */
+export function toSquirrelMacFeed(manifest) {
+  const release = (manifest.releases ?? []).find(
+    (r) => r.version === manifest.currentRelease,
+  );
+  if (!release?.updateTo) {
+    throw new Error(
+      `No release entry found for currentRelease ${manifest.currentRelease}`,
+    );
+  }
+
+  const { url, name, notes, pub_date } = release.updateTo;
+  return { url, name, notes, pub_date };
+}
+
 function main(argv) {
   const [manifestPath, zipPath] = argv;
   if (!manifestPath || !zipPath) {
@@ -62,6 +89,9 @@ function main(argv) {
 
   const normalized = normalizeManifest(manifest, normalizedName);
   fs.writeFileSync(manifestPath, JSON.stringify(normalized));
+
+  const feedPath = path.join(path.dirname(manifestPath), 'update.json');
+  fs.writeFileSync(feedPath, JSON.stringify(toSquirrelMacFeed(normalized)));
 
   const normalizedZipPath = path.join(path.dirname(zipPath), normalizedName);
   if (normalizedZipPath !== zipPath) {
