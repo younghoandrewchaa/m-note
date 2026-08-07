@@ -11,7 +11,7 @@ import {
 
 /** Must match the button's width/height in inline-code-copy-button.scss. */
 const BUTTON_SIZE = 22
-/** Must match --tt-toolbar-height in src/styles/_variables.scss. */
+/** Must match --tt-toolbar-height in simple-editor.scss (44px). */
 const TOOLBAR_HEIGHT = 44
 /** Grace period so the pointer can travel from the span to the button. */
 const HIDE_DELAY_MS = 150
