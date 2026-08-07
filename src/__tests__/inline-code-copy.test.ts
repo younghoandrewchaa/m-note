@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { findInlineCodeElement } from '../lib/inline-code-copy'
+import { findInlineCodeElement, computeButtonPosition } from '../lib/inline-code-copy'
 
 function render(html: string): HTMLElement {
   const container = document.createElement('div')
@@ -36,5 +36,30 @@ describe('findInlineCodeElement', () => {
 
   it('returns null for a null target', () => {
     expect(findInlineCodeElement(null)).toBeNull()
+  })
+})
+
+describe('computeButtonPosition', () => {
+  const viewport = { width: 1000, height: 800 }
+  const size = 22
+
+  it('places the button above the span and right-aligned to it', () => {
+    const rect = { top: 100, right: 150, bottom: 120, left: 50 }
+    expect(computeButtonPosition(rect, size, viewport)).toEqual({ top: 74, left: 128 })
+  })
+
+  it('flips below the span when there is no room above', () => {
+    const rect = { top: 10, right: 150, bottom: 30, left: 50 }
+    expect(computeButtonPosition(rect, size, viewport)).toEqual({ top: 34, left: 128 })
+  })
+
+  it('clamps the left edge when the span sits at the left margin', () => {
+    const rect = { top: 100, right: 10, bottom: 120, left: 2 }
+    expect(computeButtonPosition(rect, size, viewport)).toEqual({ top: 74, left: 0 })
+  })
+
+  it('clamps the right edge when the span overflows the viewport', () => {
+    const rect = { top: 100, right: 1010, bottom: 120, left: 900 }
+    expect(computeButtonPosition(rect, size, viewport)).toEqual({ top: 74, left: 978 })
   })
 })
