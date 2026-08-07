@@ -62,4 +62,11 @@ describe('computeButtonPosition', () => {
     const rect = { top: 100, right: 1010, bottom: 120, left: 900 }
     expect(computeButtonPosition(rect, size, viewport)).toEqual({ top: 74, left: 978 })
   })
+
+  it('flips below the span when it sits under a non-zero topBoundary', () => {
+    const rect = { top: 50, right: 150, bottom: 70, left: 50 }
+    // Room above the viewport top (50 - 22 - 4 = 24 >= 0), but not above a
+    // topBoundary of 44 (e.g. a sticky toolbar), so it must flip below.
+    expect(computeButtonPosition(rect, size, viewport, 44)).toEqual({ top: 74, left: 128 })
+  })
 })

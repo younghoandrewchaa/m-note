@@ -11,6 +11,8 @@ import {
 
 /** Must match the button's width/height in inline-code-copy-button.scss. */
 const BUTTON_SIZE = 22
+/** Must match --tt-toolbar-height in src/styles/_variables.scss. */
+const TOOLBAR_HEIGHT = 44
 /** Grace period so the pointer can travel from the span to the button. */
 const HIDE_DELAY_MS = 150
 const COPIED_RESET_MS = 2000
@@ -19,10 +21,12 @@ export function InlineCodeCopyButton({ editor }: { editor: Editor | null }) {
   const [target, setTarget] = useState<HTMLElement | null>(null)
   const [position, setPosition] = useState<ButtonPosition | null>(null)
   const [copied, setCopied] = useState(false)
+  const targetRef = useRef<HTMLElement | null>(null)
   const hideTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
   const copiedTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const hide = useCallback(() => {
+    targetRef.current = null
     setTarget(null)
     setPosition(null)
     setCopied(false)
@@ -40,15 +44,27 @@ export function InlineCodeCopyButton({ editor }: { editor: Editor | null }) {
 
   const show = useCallback((element: HTMLElement) => {
     clearTimeout(hideTimeout.current)
+    if (targetRef.current !== element) {
+      // A new span: any "copied" state belongs to the previous span and
+      // must not leak onto this one.
+      setCopied(false)
+      clearTimeout(copiedTimeout.current)
+    }
     // A wrapped span's bounding rect spans both lines; anchor to the first
     // line box so the button never floats over intervening text.
     const rect = element.getClientRects()[0] ?? element.getBoundingClientRect()
+    targetRef.current = element
     setTarget(element)
     setPosition(
-      computeButtonPosition(rect, BUTTON_SIZE, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      })
+      computeButtonPosition(
+        rect,
+        BUTTON_SIZE,
+        {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        },
+        TOOLBAR_HEIGHT
+      )
     )
   }, [])
 

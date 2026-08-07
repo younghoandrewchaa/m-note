@@ -36,18 +36,24 @@ export const BUTTON_GAP = 4
  * Viewport coordinates for a `position: fixed` square copy button.
  *
  * The button is right-aligned to the span and sits above it, flipping below
- * when there is no room, and clamped so it never leaves the viewport.
+ * when there is no room above `topBoundary` (e.g. a sticky toolbar), and
+ * clamped horizontally so it never leaves the viewport.
+ *
+ * `viewport.height` is intentionally not used to clamp the bottom edge: the
+ * flip-below branch can only fire when the span sits near the top of the
+ * content area, so a flipped button can never reach the viewport bottom.
  */
 export function computeButtonPosition(
   rect: PositionRect,
   buttonSize: number,
-  viewport: Viewport
+  viewport: Viewport,
+  topBoundary = 0
 ): ButtonPosition {
   const maxLeft = Math.max(viewport.width - buttonSize, 0)
   const left = Math.min(Math.max(rect.right - buttonSize, 0), maxLeft)
 
   const above = rect.top - buttonSize - BUTTON_GAP
-  const top = above >= 0 ? above : rect.bottom + BUTTON_GAP
+  const top = above >= topBoundary ? above : rect.bottom + BUTTON_GAP
 
   return { top, left }
 }
