@@ -38,6 +38,7 @@ import { extractFrontmatter } from "@/lib/frontmatter"
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
 import "@/components/tiptap-node/frontmatter-node/frontmatter-node.scss"
 import "@/components/tiptap-node/code-block-node/code-block-node.scss"
+import "@/components/tiptap-ui/inline-code-copy/inline-code-copy-button.scss"
 import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
 import "@/components/tiptap-node/list-node/list-node.scss"
 import "@/components/tiptap-node/image-node/image-node.scss"
@@ -51,6 +52,7 @@ import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button"
 import { CopyMarkdownButton } from "@/components/tiptap-ui/copy-markdown-button"
 import { CopyFilePathButton } from "@/components/tiptap-ui/copy-file-path-button"
 import { SaveButton } from "@/components/tiptap-ui/save-button"
+import { InlineCodeCopyButton } from "@/components/tiptap-ui/inline-code-copy"
 import { CheckUpdateButton } from "@/components/tiptap-ui/check-update-button"
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
 import { BlockquoteButton } from "@/components/tiptap-ui/blockquote-button"
@@ -513,6 +515,8 @@ export function SimpleEditor() {
           role="presentation"
           className="simple-editor-content"
         />
+
+        <InlineCodeCopyButton editor={editor} />
       </EditorContext.Provider>
       <span className="version-label">v{__APP_VERSION__}</span>
     </div>
