@@ -1,7 +1,7 @@
 {
   "name": "m-note",
   "productName": "M Note",
-  "version": "1.1.21",
+  "version": "1.2.0",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",
   "private": true,
@@ -49,6 +49,7 @@
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.10.1",
     "eslint-plugin-import": "^2.32.0",
+    "jsdom": "^29.1.1",
     "sass": "^1.100.0",
     "sass-embedded": "^1.100.0",
     "typescript": "~5.5",

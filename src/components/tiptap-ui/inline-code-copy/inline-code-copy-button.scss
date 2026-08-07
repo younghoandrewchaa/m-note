@@ -1,0 +1,37 @@
+.inline-code-copy-btn {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background-color: var(--tt-bg-color);
+  color: var(--tt-gray-light-a-600);
+  border: 1px solid var(--tt-gray-light-a-200);
+  border-radius: var(--tt-radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  outline: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--tt-brand-color-500);
+    border-color: var(--tt-brand-color-400);
+  }
+
+  &:focus-visible {
+    border-color: var(--tt-brand-color-400);
+  }
+
+  .dark & {
+    color: var(--tt-gray-dark-a-600);
+    border-color: var(--tt-gray-dark-a-200);
+  }
+}
+
+.inline-code-copy-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
