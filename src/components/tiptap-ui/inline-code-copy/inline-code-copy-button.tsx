@@ -26,6 +26,7 @@ export function InlineCodeCopyButton({ editor }: { editor: Editor | null }) {
     setTarget(null)
     setPosition(null)
     setCopied(false)
+    clearTimeout(copiedTimeout.current)
   }, [])
 
   const cancelHide = useCallback(() => {
@@ -75,7 +76,9 @@ export function InlineCodeCopyButton({ editor }: { editor: Editor | null }) {
   }, [editor, show, hideSoon])
 
   // While visible: hide on scroll (the fixed position would go stale), and
-  // hide if the span was edited out of the document underneath us.
+  // hide on any ProseMirror document update, since an edit elsewhere in the
+  // document (e.g. via keyboard, without moving the mouse) can detach or
+  // replace the hovered span underneath us.
   useEffect(() => {
     if (!target) return
     if (!target.isConnected) {
@@ -83,8 +86,12 @@ export function InlineCodeCopyButton({ editor }: { editor: Editor | null }) {
       return
     }
     window.addEventListener("scroll", hide, true)
-    return () => window.removeEventListener("scroll", hide, true)
-  }, [target, hide])
+    editor?.on("update", hide)
+    return () => {
+      window.removeEventListener("scroll", hide, true)
+      editor?.off("update", hide)
+    }
+  }, [target, hide, editor])
 
   useEffect(() => {
     return () => {
