@@ -1,3 +1,5 @@
+
+
 # M Note
 
 A markdown editor built with Electron, React, and Tiptap.
@@ -54,3 +56,10 @@ npm run build:dmg
 
 Builds the DMG without bumping the version or publishing. Useful for local testing.
 
+### Test
+
+```bash
+npm test
+```
+
+Runs the unit tests via Vitest.
