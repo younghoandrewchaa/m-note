@@ -9,7 +9,7 @@ import {
   createDebouncedWindowBoundsWriter,
   getDefaultWindowBounds,
   readWindowBounds,
-  type WindowBounds,
+  type WindowBoundsWriter,
 } from './window-state'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -20,7 +20,7 @@ if (started) {
 const pendingFilePaths: string[] = []
 let appReady = false
 const windowFilePaths = new Map<number, string>()
-let saveWindowBounds: ((bounds: WindowBounds) => void) | null = null
+let saveWindowBounds: WindowBoundsWriter | null = null
 
 // Must be registered before 'ready' to catch files opened at launch on macOS.
 app.on('open-file', (event, filePath) => {
@@ -170,7 +170,14 @@ app.on('ready', () => {
 })
 
 app.on('window-all-closed', () => {
+  saveWindowBounds?.flush()
   app.quit()
+})
+
+// Flushes any bounds still pending in the debounce timer so a move/resize
+// followed immediately by quit (e.g. a Rectangle snap then Cmd+Q) isn't lost.
+app.on('before-quit', () => {
+  saveWindowBounds?.flush()
 })
 
 // In this file you can include the rest of your app's specific main process

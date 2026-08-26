@@ -78,11 +78,13 @@ export function writeWindowBounds(userDataPath: string, bounds: WindowBounds) {
   fs.writeFileSync(getStateFilePath(userDataPath), JSON.stringify(bounds, null, 2), 'utf-8')
 }
 
-export function createDebouncedWindowBoundsWriter(userDataPath: string, delayMs = 250) {
+export type WindowBoundsWriter = ((bounds: WindowBounds) => void) & { flush: () => void }
+
+export function createDebouncedWindowBoundsWriter(userDataPath: string, delayMs = 250): WindowBoundsWriter {
   let timeout: ReturnType<typeof setTimeout> | null = null
   let latestBounds: WindowBounds | null = null
 
-  return (bounds: WindowBounds) => {
+  const write = ((bounds: WindowBounds) => {
     latestBounds = bounds
     if (timeout) clearTimeout(timeout)
 
@@ -90,5 +92,15 @@ export function createDebouncedWindowBoundsWriter(userDataPath: string, delayMs 
       if (latestBounds) writeWindowBounds(userDataPath, latestBounds)
       timeout = null
     }, delayMs)
+  }) as WindowBoundsWriter
+
+  write.flush = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
+    if (latestBounds) writeWindowBounds(userDataPath, latestBounds)
   }
+
+  return write
 }

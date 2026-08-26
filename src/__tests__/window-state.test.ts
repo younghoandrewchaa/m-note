@@ -116,4 +116,31 @@ describe('window-state', () => {
       'utf-8',
     )
   })
+
+  it('flush writes pending bounds immediately without waiting for the debounce timer', () => {
+    vi.useFakeTimers()
+    const write = createDebouncedWindowBoundsWriter(userDataPath, 250)
+
+    write({ x: 5, y: 6, width: 1000, height: 800 })
+    write.flush()
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      '/user/data/window-state.json',
+      JSON.stringify({ x: 5, y: 6, width: 1000, height: 800 }, null, 2),
+      'utf-8',
+    )
+
+    // The debounce timer should be cancelled, so it must not write again.
+    vi.mocked(fs.writeFileSync).mockClear()
+    vi.advanceTimersByTime(250)
+    expect(fs.writeFileSync).not.toHaveBeenCalled()
+  })
+
+  it('flush is a no-op when there is no pending write', () => {
+    const write = createDebouncedWindowBoundsWriter(userDataPath, 250)
+
+    write.flush()
+
+    expect(fs.writeFileSync).not.toHaveBeenCalled()
+  })
 })

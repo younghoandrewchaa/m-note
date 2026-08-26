@@ -170,6 +170,43 @@ describe('remember window position', () => {
     )
   })
 
+  it('flushes pending bounds on before-quit even if the debounce timer has not fired', async () => {
+    vi.useFakeTimers()
+    const fs = await import('node:fs')
+    await importFreshMain()
+    mockGetBounds.mockReturnValue({ x: 15, y: 25, width: 950, height: 720 })
+
+    appHandlers.ready()
+    windowListeners.resize[0]()
+
+    // Simulate quitting immediately after a Rectangle-style resize, before
+    // the 250ms debounce would otherwise have written the file.
+    appHandlers['before-quit']()
+
+    expect(fs.default.writeFileSync).toHaveBeenCalledWith(
+      '/user/data/window-state.json',
+      JSON.stringify({ x: 15, y: 25, width: 950, height: 720 }, null, 2),
+      'utf-8',
+    )
+  })
+
+  it('flushes pending bounds on window-all-closed before quitting', async () => {
+    vi.useFakeTimers()
+    const fs = await import('node:fs')
+    await importFreshMain()
+    mockGetBounds.mockReturnValue({ x: 35, y: 45, width: 980, height: 760 })
+
+    appHandlers.ready()
+    windowListeners.move[0]()
+    appHandlers['window-all-closed']()
+
+    expect(fs.default.writeFileSync).toHaveBeenCalledWith(
+      '/user/data/window-state.json',
+      JSON.stringify({ x: 35, y: 45, width: 980, height: 760 }, null, 2),
+      'utf-8',
+    )
+  })
+
   it('uses the most recently moved window bounds for the next file-open window', async () => {
     vi.useFakeTimers()
     const fs = await import('node:fs')
