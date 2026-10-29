@@ -70,7 +70,7 @@ const createWindow = (filePath?: string) => {
   const mainWindow = new BrowserWindow({
     ...windowBounds,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   })
 
