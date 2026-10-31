@@ -5,6 +5,7 @@ import started from 'electron-squirrel-startup'
 import { checkForNativeUpdate, configureAutoUpdater, getUpdateState, isInstallingUpdate, installNativeUpdate } from './auto-updater'
 import { prepareWindowsForUpdate, restoreUpdateWindows } from './update-installation'
 import { attachCloseHandler } from './window-close-handler'
+import { clearUpdateSession, saveUpdateSession, takeUpdateSession } from './update-session'
 import {
   createDebouncedWindowBoundsWriter,
   getDefaultWindowBounds,
@@ -119,8 +120,20 @@ app.on('ready', () => {
   saveWindowBounds = createDebouncedWindowBoundsWriter(app.getPath('userData'))
   configureAutoUpdater({
     isPackaged: app.isPackaged,
-    prepareInstall: () => prepareWindowsForUpdate(BrowserWindow.getAllWindows()),
-    restoreWindows: () => { void restoreUpdateWindows() },
+    prepareInstall: async () => {
+      const windows = BrowserWindow.getAllWindows()
+      if (!(await prepareWindowsForUpdate(windows))) return false
+      // Save after preparation: an untitled note may now have a file path.
+      saveUpdateSession(app.getPath('userData'), windows.flatMap((window) => {
+        const filePath = windowFilePaths.get(window.webContents.id)
+        return filePath ? [filePath] : []
+      }))
+      return true
+    },
+    restoreWindows: () => {
+      void restoreUpdateWindows()
+      clearUpdateSession(app.getPath('userData'))
+    },
     notifyRenderer: (channel, info) => {
       for (const window of BrowserWindow.getAllWindows()) {
         window.webContents.send(channel, info)
@@ -135,6 +148,9 @@ app.on('ready', () => {
   // a packaged, OS-registered app.
   const argFilePaths = process.argv.filter((arg) => /\.(md|markdown)$/i.test(arg))
   for (const p of argFilePaths) {
+    if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
+  }
+  for (const p of takeUpdateSession(app.getPath('userData'))) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
 
