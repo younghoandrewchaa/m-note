@@ -1,5 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const prepare = vi.hoisted(() => vi.fn())
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: vi.fn() },
+}))
 vi.mock('../window-close-handler', () => ({
   prepareWindowForClose: prepare,
   approveWindowClose: vi.fn(),
