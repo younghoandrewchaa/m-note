@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
 import type { UpdateState } from '../update-state'
-export const UP_TO_DATE_BANNER_MS = 3000
 export function UpdateBanner({
   state,
   check,
@@ -10,32 +8,23 @@ export function UpdateBanner({
   check: () => void
   install: () => void
 }) {
-  const [dismissedRevision, setDismissedRevision] = useState<number>()
-  useEffect(() => {
-    if (state.status !== 'up-to-date') return
-    const timer = setTimeout(
-      () => setDismissedRevision(state.revision),
-      UP_TO_DATE_BANNER_MS,
-    )
-    return () => clearTimeout(timer)
-  }, [state.status, state.revision])
-  if (state.status === 'idle' || state.status === 'unsupported') return null
-  if (state.status === 'up-to-date' && dismissedRevision === state.revision)
+  if (
+    state.status === 'idle' ||
+    state.status === 'unsupported' ||
+    state.status === 'checking' ||
+    state.status === 'up-to-date'
+  )
     return null
   const text =
-    state.status === 'checking'
-      ? 'Checking for updates…'
-      : state.status === 'downloading'
-        ? `Downloading M Note v${state.version}…`
-        : state.status === 'ready'
-          ? `M Note v${state.version} is ready to install.`
-          : state.status === 'installing'
-            ? 'Installing update…'
-            : state.status === 'up-to-date'
-              ? "You're up to date."
-              : state.status === 'error'
-                ? state.message
-                : null
+    state.status === 'downloading'
+      ? `Downloading M Note v${state.version}…`
+      : state.status === 'ready'
+        ? `M Note v${state.version} is ready to install.`
+        : state.status === 'installing'
+          ? 'Installing update…'
+          : state.status === 'error'
+            ? state.message
+            : null
   return (
     <div className="update-banner" role="status">
       <span>{text}</span>

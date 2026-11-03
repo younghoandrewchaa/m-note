@@ -2,10 +2,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
-import {
-  UP_TO_DATE_BANNER_MS,
-  UpdateBanner,
-} from '../components/update-banner'
+import { UpdateBanner } from '../components/update-banner'
 import { newerUpdateState } from '../hooks/use-app-update'
 import type { UpdateState } from '../update-state'
 it('renders native actions and never a download link', () => {
@@ -52,8 +49,7 @@ it('ignores stale snapshots after a downloaded event', () => {
     ready,
   )
 })
-it('hides the up-to-date message after a few seconds', () => {
-  vi.useFakeTimers()
+it('renders nothing while checking or when already up to date', () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const host = document.createElement('div'),
     root = createRoot(host)
@@ -63,18 +59,12 @@ it('hides the up-to-date message after a few seconds', () => {
         <UpdateBanner state={state} check={vi.fn()} install={vi.fn()} />,
       ),
     )
-  render({ status: 'up-to-date', revision: 1 })
-  expect(host.textContent).toContain("You're up to date.")
-  act(() => vi.advanceTimersByTime(UP_TO_DATE_BANNER_MS))
-  expect(host.textContent).toBe('')
-  render({ status: 'checking', revision: 2 })
-  render({ status: 'up-to-date', revision: 3 })
-  expect(host.textContent).toContain("You're up to date.")
-  act(() => vi.advanceTimersByTime(UP_TO_DATE_BANNER_MS))
-  expect(host.textContent).toBe('')
+  render({ status: 'checking', revision: 1 })
+  expect(host.querySelector('.update-banner')).toBeNull()
+  render({ status: 'up-to-date', revision: 2 })
+  expect(host.querySelector('.update-banner')).toBeNull()
   act(() => root.unmount())
   vi.unstubAllGlobals()
-  vi.useRealTimers()
 })
 it('renders nothing when native updates are unsupported (dev builds)', () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
