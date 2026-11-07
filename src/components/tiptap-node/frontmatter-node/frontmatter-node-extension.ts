@@ -11,9 +11,10 @@ export const Frontmatter = Node.create({
   defining: true,
   isolating: true,
 
-  renderMarkdown(node: { textContent: string }, helpers: { renderChildren: (nodes: unknown) => string }) {
-    void helpers
-    return `---\n${node.textContent}\n---`
+  // The markdown serializer passes JSON content, so join the text children.
+  renderMarkdown(node: { content?: { text?: string }[] }) {
+    const text = (node.content ?? []).map((child) => child.text ?? "").join("")
+    return `---\n${text}\n---`
   },
 
   parseHTML() {
