@@ -12,6 +12,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Use the editor package's source so HMR works without a build step.
+      '@younghoandrewchaa/yeditor': path.resolve(__dirname, './packages/yeditor/src/index.ts'),
     },
   },
   css: {

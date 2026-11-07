@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  isEditorUpdateFrozen,
-  runEditorTask,
-  setEditorUpdateFrozen,
-} from "@/editor-update-guard"
 import { useAppUpdate } from "@/hooks/use-app-update"
 import { UpdateBanner } from "@/components/update-banner"
-import { CopyFilePathButton } from "@/components/tiptap-ui/copy-file-path-button"
-import { CheckUpdateButton } from "@/components/tiptap-ui/check-update-button"
+import { CopyFilePathButton } from "@/desktop-toolbar/copy-file-path-button"
+import { CheckUpdateButton } from "@/desktop-toolbar/check-update-button"
 import { ThemeToggle } from "@/theme-toggle"
 import { handleFileDrop } from "@/handle-file-drop"
 import {
   isLocalMarkdownLink,
   resolveLocalMarkdownPath,
 } from "@/lib/local-markdown-link"
-import { sanitizeUrl } from "@/lib/tiptap-utils"
-import { YEditor, type YEditorHandle } from "@/yeditor"
+import {
+  YEditor,
+  isEditorUpdateFrozen,
+  runEditorTask,
+  sanitizeUrl,
+  setEditorUpdateFrozen,
+  type YEditorHandle,
+} from "@younghoandrewchaa/yeditor"
 
 import "./note-editor.scss"
 
