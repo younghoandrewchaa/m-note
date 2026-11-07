@@ -4,6 +4,7 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -275,6 +276,7 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
     },
     ref,
   ) {
+    const editorId = useId()
     const isMobile = useIsBreakpoint()
     const { height } = useWindowSize()
     const [mobileView, setMobileView] = useState<
@@ -419,12 +421,12 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
     }, [isMobile, mobileView])
 
     const config = useMemo(
-      () => ({ onOpenLink: onOpenLink ?? defaultOpenLink }),
-      [onOpenLink],
+      () => ({ onOpenLink: onOpenLink ?? defaultOpenLink, editorId }),
+      [onOpenLink, editorId],
     )
 
     return (
-      <div className={cn("simple-editor-wrapper", "yeditor", className)}>
+      <div className={cn("simple-editor-wrapper", "yeditor", className)} data-yeditor-id={editorId}>
         <YEditorConfigContext.Provider value={config}>
           <EditorContext.Provider value={{ editor }}>
             <Toolbar

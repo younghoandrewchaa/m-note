@@ -74,55 +74,57 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ editor }) => {
     totalMatches > 0 ? `${currentIndex + 1} of ${totalMatches}` : "No results"
 
   return (
-    <div className="search-panel">
-      <Card>
-        <CardBody>
-          <CardItemGroup orientation="horizontal">
-            <Input
-              ref={inputRef}
-              type="text"
-              placeholder="Find..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              className="search-panel-input"
-            />
-            <span className="search-panel-count">{matchCountText}</span>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={goToPrevious}
-              disabled={totalMatches === 0}
-              title="Previous match (Shift+Enter)"
-              tabIndex={-1}
-            >
-              <ChevronUpIcon className="tiptap-button-icon" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={goToNext}
-              disabled={totalMatches === 0}
-              title="Next match (Enter)"
-              tabIndex={-1}
-            >
-              <ChevronDownIcon className="tiptap-button-icon" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={closeSearch}
-              title="Close (Escape)"
-              tabIndex={-1}
-            >
-              <CloseIcon className="tiptap-button-icon" />
-            </Button>
-          </CardItemGroup>
-        </CardBody>
-      </Card>
+    <div className="search-panel-anchor">
+      <div className="search-panel">
+        <Card>
+          <CardBody>
+            <CardItemGroup orientation="horizontal">
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder="Find..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                className="search-panel-input"
+              />
+              <span className="search-panel-count">{matchCountText}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={goToPrevious}
+                disabled={totalMatches === 0}
+                title="Previous match (Shift+Enter)"
+                tabIndex={-1}
+              >
+                <ChevronUpIcon className="tiptap-button-icon" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={goToNext}
+                disabled={totalMatches === 0}
+                title="Next match (Enter)"
+                tabIndex={-1}
+              >
+                <ChevronDownIcon className="tiptap-button-icon" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={closeSearch}
+                title="Close (Escape)"
+                tabIndex={-1}
+              >
+                <CloseIcon className="tiptap-button-icon" />
+              </Button>
+            </CardItemGroup>
+          </CardBody>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -1,11 +1,19 @@
 @use "../../../styles/variables";
 @use "../../../styles/keyframe-animations";
 
-.search-panel {
-  position: fixed;
-  top: calc(44px + 0.5rem); // toolbar height + spacing
-  right: 1rem;
+.search-panel-anchor {
+  position: sticky;
+  top: var(--tt-toolbar-height);
+  height: 0;
   z-index: 51; // Above toolbar (z-index: 50)
+}
+
+.search-panel {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  max-width: calc(100% - 2rem);
+  overflow-x: auto;
   animation: slideFromTop var(--tt-transition-duration-default) var(--tt-transition-easing-default),
              fadeIn var(--tt-transition-duration-default) var(--tt-transition-easing-default);
 

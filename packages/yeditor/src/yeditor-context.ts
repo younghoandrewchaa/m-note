@@ -3,6 +3,7 @@ import { sanitizeUrl } from "./lib/tiptap-utils"
 
 export interface YEditorConfig {
   onOpenLink: (url: string) => void
+  editorId?: string
 }
 
 export function defaultOpenLink(url: string): void {

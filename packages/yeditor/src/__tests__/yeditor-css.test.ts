@@ -9,6 +9,24 @@ const src = path.resolve(__dirname, "..")
 const entry = path.join(src, "yeditor.scss")
 const css = () => sass.compile(entry).css
 
+it("anchors search inside the scrolling editor instead of the viewport", () => {
+  const file = path.join(src, "components/tiptap-ui/search-panel/search-panel.scss")
+  const rules = new Map<string, Record<string, string>>()
+  postcss.parse(sass.compile(file).css).walkRules((rule) => {
+    const declarations: Record<string, string> = {}
+    rule.each((node) => {
+      if (node.type === "decl") declarations[node.prop] = node.value
+    })
+    rules.set(rule.selector, declarations)
+  })
+  expect(rules.get(".search-panel-anchor")).toMatchObject({
+    position: "sticky",
+    top: "var(--tt-toolbar-height)",
+    height: "0",
+  })
+  expect(rules.get(".search-panel")).toMatchObject({ position: "absolute" })
+})
+
 // Every stylesheet the editor ships: the entry plus the ones components import.
 const sheetPaths = ["components", "styles"].flatMap((dir) =>
   fs

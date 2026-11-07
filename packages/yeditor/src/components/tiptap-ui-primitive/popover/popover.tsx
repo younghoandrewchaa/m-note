@@ -1,4 +1,6 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover"
+import { useContext } from "react"
+import { YEditorConfigContext } from "../../../yeditor-context"
 import { cn } from "../../../lib/tiptap-utils"
 import "./popover.scss"
 
@@ -20,6 +22,7 @@ function PopoverContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const { editorId } = useContext(YEditorConfigContext)
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -27,6 +30,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         className={cn("tiptap-popover", className)}
         {...props}
+        data-yeditor-owner={editorId}
       />
     </PopoverPrimitive.Portal>
   )

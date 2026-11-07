@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { YEditor, type YEditorHandle, type YEditorProps } from "../index"
 import { useLinkHandler } from "../components/tiptap-ui/link-popover"
 import { YEditorConfigContext } from "../yeditor-context"
+import { Popover, PopoverContent } from "../components/tiptap-ui-primitive/popover"
 
 let host: HTMLDivElement
 let root: Root
@@ -277,6 +278,30 @@ it("mod+f only opens search in the editor the key was pressed in", async () => {
   press(a, "f")
   expect(host.querySelectorAll(".search-panel")).toHaveLength(1)
   expect(a.closest(".yeditor")!.querySelector(".search-panel")).not.toBeNull()
+})
+
+it("routes save and search shortcuts from a portalled input to its owning editor", async () => {
+  const saveA = vi.fn()
+  const saveB = vi.fn()
+  const [a, b] = await renderTwo(
+    {
+      onSave: saveA,
+      toolbarEnd: (
+        <Popover defaultOpen>
+          <PopoverContent><input aria-label="Portal input" /></PopoverContent>
+        </Popover>
+      ),
+    },
+    { onSave: saveB },
+  )
+  const input = document.querySelector('[aria-label="Portal input"]')!
+  expect(a.closest(".yeditor")!.contains(input)).toBe(false)
+  expect(press(input, "s").defaultPrevented).toBe(true)
+  expect(saveA).toHaveBeenCalledOnce()
+  expect(saveB).not.toHaveBeenCalled()
+  press(input, "f")
+  expect(a.closest(".yeditor")!.querySelector(".search-panel")).not.toBeNull()
+  expect(b.closest(".yeditor")!.querySelector(".search-panel")).toBeNull()
 })
 
 it("toggling onImageUpload keeps the editor, its edits and calls onReady once", async () => {

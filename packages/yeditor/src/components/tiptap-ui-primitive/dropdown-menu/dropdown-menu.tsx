@@ -1,4 +1,6 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
+import { useContext } from "react"
+import { YEditorConfigContext } from "../../../yeditor-context"
 import { cn } from "../../../lib/tiptap-utils"
 import { CheckIcon } from "../../tiptap-icons/check-icon"
 
@@ -40,6 +42,7 @@ function DropdownMenuContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const { editorId } = useContext(YEditorConfigContext)
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -49,6 +52,7 @@ function DropdownMenuContent({
         className={cn("tiptap-dropdown-menu-content", className)}
         onCloseAutoFocus={(e) => e.preventDefault()}
         {...props}
+        data-yeditor-owner={editorId}
       />
     </DropdownMenuPrimitive.Portal>
   )
@@ -234,11 +238,13 @@ function DropdownMenuSubContent({
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  const { editorId } = useContext(YEditorConfigContext)
   return (
     <DropdownMenuPrimitive.SubContent
       data-slot="tiptap-dropdown-menu-sub-content"
       className={cn("tiptap-dropdown-menu-sub-content", className)}
       {...props}
+      data-yeditor-owner={editorId}
     />
   )
 }
