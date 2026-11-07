@@ -9,7 +9,7 @@ import { useAppUpdate } from "@/hooks/use-app-update"
 import { UpdateBanner } from "@/components/update-banner"
 import { CopyFilePathButton } from "@/components/tiptap-ui/copy-file-path-button"
 import { CheckUpdateButton } from "@/components/tiptap-ui/check-update-button"
-import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
+import { ThemeToggle } from "@/theme-toggle"
 import { handleFileDrop } from "@/handle-file-drop"
 import {
   isLocalMarkdownLink,
@@ -17,6 +17,8 @@ import {
 } from "@/lib/local-markdown-link"
 import { sanitizeUrl } from "@/lib/tiptap-utils"
 import { YEditor, type YEditorHandle } from "@/yeditor"
+
+import "./note-editor.scss"
 
 const fileName = (path: string) => path.split("/").pop() ?? path
 
@@ -171,7 +173,7 @@ export function NoteEditor() {
   }, [handle])
 
   return (
-    <>
+    <div className="note-editor">
       <UpdateBanner {...appUpdate} />
       <YEditor
         ref={editorRef}
@@ -192,6 +194,6 @@ export function NoteEditor() {
         }
       />
       <span className="version-label">v{__APP_VERSION__}</span>
-    </>
+    </div>
   )
 }

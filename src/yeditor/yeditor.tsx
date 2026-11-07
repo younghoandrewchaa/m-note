@@ -100,7 +100,7 @@ import { defaultOpenLink, YEditorConfigContext } from "./yeditor-context"
 import { setMarkdownWithFrontmatter } from "./set-markdown"
 
 // --- Styles ---
-import "@/components/tiptap-templates/simple/simple-editor.scss"
+import "./yeditor.scss"
 
 export type ImageUploadHandler = (
   file: File,
