@@ -1,0 +1,80 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+html,
+body,
+#root {
+  height: 100%;
+  background-color: var(--tt-bg-color);
+  overscroll-behavior: none;
+}
+
+.note-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+
+  > .yeditor {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--tt-blue-light-100, #dbeafe);
+  color: var(--tt-blue-light-900, #1e3a5f);
+  font-family: var(--tt-font-body);
+  font-size: 0.8125rem;
+
+  .dark & {
+    background-color: var(--tt-blue-dark-100, #1e3a5f);
+    color: var(--tt-blue-dark-900, #dbeafe);
+  }
+}
+
+.update-banner-link {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.update-banner-dismiss {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  line-height: 1;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.version-label {
+  position: fixed;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  font-family: var(--tt-font-body);
+  font-size: 0.6875rem;
+  color: var(--tt-gray-light-400);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  opacity: 0.6;
+
+  .dark & {
+    color: var(--tt-gray-dark-400);
+  }
+}
+

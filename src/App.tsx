@@ -1,7 +1,7 @@
-import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor'
+import { NoteEditor } from '@/note-editor'
 
 function App() {
-  return <SimpleEditor />
+  return <NoteEditor />
 }
 
 export default App
