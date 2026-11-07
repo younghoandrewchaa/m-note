@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/London"
+    open-pull-requests-limit: 10
+    assignees:
+      - "younghoandrewchaa"
+    groups:
+      tiptap:
+        applies-to: version-updates
+        patterns:
+          - "@tiptap/*"
+        update-types: ["minor", "patch"]
+      react:
+        applies-to: version-updates
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["minor", "patch"]
+      forge:
+        applies-to: version-updates
+        patterns:
+          - "@electron-forge/*"
+        update-types: ["minor", "patch"]
+      build-tooling:
+        applies-to: version-updates
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+          - "vitest"
+          - "typescript"
+        update-types: ["minor", "patch"]
+      eslint:
+        applies-to: version-updates
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+        update-types: ["minor", "patch"]
