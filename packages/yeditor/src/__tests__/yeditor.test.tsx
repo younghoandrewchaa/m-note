@@ -212,3 +212,95 @@ it("calls onReady once with a usable handle after initialValue loads", async () 
   await vi.waitFor(() => expect(onReady).toHaveBeenCalledOnce())
   expect(onReady.mock.calls[0][0].getMarkdown().trim()).toBe("Ready text")
 })
+
+async function renderTwo(a: YEditorProps, b: YEditorProps) {
+  const first = createRef<YEditorHandle>()
+  const second = createRef<YEditorHandle>()
+  await act(async () =>
+    root.render(
+      <>
+        <YEditor ref={first} {...a} />
+        <YEditor ref={second} {...b} />
+      </>,
+    ),
+  )
+  await vi.waitFor(() => {
+    expect(first.current?.editor).toBeTruthy()
+    expect(second.current?.editor).toBeTruthy()
+  })
+  return host.querySelectorAll<HTMLElement>(".ProseMirror")
+}
+
+function press(target: EventTarget, key: string) {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    code: `Key${key.toUpperCase()}`,
+    metaKey: true,
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  })
+  act(() => {
+    target.dispatchEvent(event)
+  })
+  return event
+}
+
+it("mod+s only saves the editor the key was pressed in", async () => {
+  const saveA = vi.fn()
+  const saveB = vi.fn()
+  const [a] = await renderTwo({ onSave: saveA }, { onSave: saveB })
+  press(a, "s")
+  expect(saveA).toHaveBeenCalledOnce()
+  expect(saveB).not.toHaveBeenCalled()
+})
+
+it("mod+s outside any editor is left to the browser when there are two editors", async () => {
+  const saveA = vi.fn()
+  const saveB = vi.fn()
+  await renderTwo({ onSave: saveA }, { onSave: saveB })
+  const event = press(document.body, "s")
+  expect(saveA).not.toHaveBeenCalled()
+  expect(saveB).not.toHaveBeenCalled()
+  expect(event.defaultPrevented).toBe(false)
+})
+
+it("mod+s with nothing focused still saves a lone editor", async () => {
+  const onSave = vi.fn()
+  await renderEditor({ onSave })
+  press(document.body, "s")
+  expect(onSave).toHaveBeenCalledOnce()
+})
+
+it("mod+f only opens search in the editor the key was pressed in", async () => {
+  const [a] = await renderTwo({}, {})
+  press(a, "f")
+  expect(host.querySelectorAll(".search-panel")).toHaveLength(1)
+  expect(a.closest(".yeditor")!.querySelector(".search-panel")).not.toBeNull()
+})
+
+it("toggling onImageUpload keeps the editor, its edits and calls onReady once", async () => {
+  const onReady = vi.fn()
+  const ref = await renderEditor({ initialValue: "Start", onReady })
+  const editor = ref.current.editor
+  act(() => {
+    ref.current.editor!.commands.insertContentAt(
+      ref.current.editor!.state.doc.content.size,
+      { type: "paragraph", content: [{ type: "text", text: "Typed" }] },
+    )
+  })
+  await act(async () =>
+    root.render(
+      <YEditor
+        ref={ref}
+        initialValue="Start"
+        onReady={onReady}
+        onImageUpload={vi.fn().mockResolvedValue("u")}
+      />,
+    ),
+  )
+  expect(ref.current.editor).toBe(editor)
+  expect(ref.current.getMarkdown()).toContain("Typed")
+  expect(onReady).toHaveBeenCalledOnce()
+  expect(host.querySelector('[aria-label="Add image"]')).not.toBeNull()
+})

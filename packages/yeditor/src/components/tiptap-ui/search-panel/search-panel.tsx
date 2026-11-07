@@ -1,5 +1,6 @@
 import { useRef, useEffect, type KeyboardEvent } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
+import { isEventForEditor } from "../../../lib/editor-event"
 import type { Editor } from "@tiptap/core"
 import { useSearch } from "./use-search"
 import { Card, CardBody, CardItemGroup } from "../../tiptap-ui-primitive/card/card"
@@ -33,6 +34,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ editor }) => {
   useHotkeys(
     "mod+f",
     (e) => {
+      if (!isEventForEditor(editor ?? null, e)) return
       e.preventDefault()
       if (isOpen) {
         // If already open, select all text in input
@@ -42,7 +44,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ editor }) => {
       }
     },
     { enableOnFormTags: true, enableOnContentEditable: true },
-    [isOpen]
+    [isOpen, editor]
   )
 
   // Auto-focus input when panel opens

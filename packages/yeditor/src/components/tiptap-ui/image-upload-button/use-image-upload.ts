@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
+import { isEventForEditor } from "../../../lib/editor-event"
 import { type Editor } from "@tiptap/react"
 
 // --- Hooks ---
@@ -175,6 +176,7 @@ export function useImageUpload(config?: UseImageUploadConfig) {
   useHotkeys(
     IMAGE_UPLOAD_SHORTCUT_KEY,
     (event) => {
+      if (!isEventForEditor(editor, event)) return
       event.preventDefault()
       handleImage()
     },

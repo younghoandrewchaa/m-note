@@ -98,6 +98,7 @@ import { useCursorVisibility } from "./hooks/use-cursor-visibility"
 import { cn, MAX_FILE_SIZE } from "./lib/tiptap-utils"
 import { defaultOpenLink, YEditorConfigContext } from "./yeditor-context"
 import { setMarkdownWithFrontmatter } from "./set-markdown"
+import { isEventForEditor } from "./lib/editor-event"
 
 // --- Styles ---
 import "./yeditor.scss"
@@ -332,25 +333,28 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
           TableRow,
           TableCell,
           TableHeader,
-          ...(hasImageUpload
-            ? [
-                ImageUploadNode.configure({
-                  accept: "image/*",
-                  maxSize: MAX_FILE_SIZE,
-                  limit: 3,
-                  upload: (file, onProgress, abortSignal) =>
-                    onImageUploadRef.current!(file, onProgress, abortSignal),
-                  onError: (error) =>
-                    (onImageUploadErrorRef.current ?? console.error)(error),
-                }),
-              ]
-            : []),
+          // Always registered so toggling onImageUpload never recreates the editor;
+          // the button is what's hidden when there's no handler.
+          ImageUploadNode.configure({
+            accept: "image/*",
+            maxSize: MAX_FILE_SIZE,
+            limit: 3,
+            upload: (file, onProgress, abortSignal) => {
+              const upload = onImageUploadRef.current
+              if (!upload) {
+                return Promise.reject(new Error("Image upload is not configured."))
+              }
+              return upload(file, onProgress, abortSignal)
+            },
+            onError: (error) =>
+              (onImageUploadErrorRef.current ?? console.error)(error),
+          }),
           Markdown,
           Search,
         ],
         content: "",
       },
-      [hasImageUpload],
+      [],
     )
 
     const handle = useMemo<YEditorHandle>(
@@ -391,6 +395,7 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
     useHotkeys(
       "mod+s",
       (e) => {
+        if (!isEventForEditor(editor, e)) return
         e.preventDefault()
         void handleSave()
       },
@@ -399,7 +404,7 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
         enableOnFormTags: true,
         enableOnContentEditable: true,
       },
-      [handleSave],
+      [handleSave, editor],
     )
 
     const rect = useCursorVisibility({

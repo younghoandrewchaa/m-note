@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { type Editor } from "@tiptap/react"
 import { useHotkeys } from "react-hotkeys-hook"
+import { isEventForEditor } from "../../../lib/editor-event"
 
 // --- Hooks ---
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
@@ -356,6 +357,7 @@ export function useColorHighlight(config: UseColorHighlightConfig) {
   useHotkeys(
     COLOR_HIGHLIGHT_SHORTCUT_KEY,
     (event) => {
+      if (!isEventForEditor(editor, event)) return
       event.preventDefault()
       handleColorHighlight()
     },
