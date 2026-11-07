@@ -44,7 +44,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
-    "electron": "42.0.0",
+    "electron": "42.11.16",
     "encoding": "^0.1.13",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.10.1",
