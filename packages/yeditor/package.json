@@ -13,11 +13,23 @@
     "directory": "packages/yeditor"
   },
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
   "sideEffects": [
     "**/*.scss",
     "**/*.css"
   ],
   "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json && node scripts/check-dist.mjs",
+    "dev": "vite example",
     "test": "vitest run"
   },
   "peerDependencies": {
@@ -53,6 +65,11 @@
     "react-hotkeys-hook": "^5.3.2"
   },
   "devDependencies": {
-    "postcss": "^8.5.0"
+    "@vitejs/plugin-react": "^4.7.0",
+    "postcss": "^8.5.0",
+    "sass": "^1.100.0",
+    "typescript": "~5.5",
+    "vite": "^5.4.21",
+    "vitest": "^4.1.12"
   }
 }

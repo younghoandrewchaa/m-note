@@ -18,12 +18,25 @@
   }
 }
 
-.yeditor {
+:root {
   --tt-toolbar-height: 44px;
   --tt-theme-text: var(--tt-gray-light-900);
   --tt-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --tt-font-code: "JetBrains Mono", "JetBrains Mono NL", ui-monospace, monospace;
+}
 
+.dark {
+  --tt-theme-text: var(--tt-gray-dark-900);
+}
+
+// Tooltips, popovers and dropdowns portal into document.body, outside .yeditor.
+.tiptap-tooltip,
+.tiptap-popover,
+.tiptap-dropdown-menu-content {
+  font-family: var(--tt-font-body);
+}
+
+.yeditor {
   width: 100%;
   height: 100%;
   overflow: auto;
@@ -36,10 +49,6 @@
   overscroll-behavior: none;
   scrollbar-width: thin;
   scrollbar-color: var(--tt-scrollbar-color) transparent;
-
-  .dark & {
-    --tt-theme-text: var(--tt-gray-dark-900);
-  }
 
   * {
     scrollbar-width: thin;

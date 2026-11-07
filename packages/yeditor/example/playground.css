@@ -1,0 +1,58 @@
+/* Host-page styles: the blog owns the page, YEditor only fills its pane. */
+body {
+  margin: 0;
+  font-family: Georgia, serif;
+  background: #f4f1ea;
+  color: #222;
+}
+.dark body {
+  background: #111;
+  color: #ddd;
+}
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ccc;
+}
+.page-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+.editor-pane {
+  min-height: 0;
+  border-right: 1px solid #ccc;
+}
+.preview-pane {
+  overflow: auto;
+  padding: 0 1rem;
+}
+.preview-pane pre {
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+}
+.publish {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  border: 0;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+@media (max-width: 720px) {
+  .page-main {
+    grid-template-columns: 1fr;
+  }
+  .preview-pane {
+    display: none;
+  }
+}

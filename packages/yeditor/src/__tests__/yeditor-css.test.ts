@@ -1,8 +1,9 @@
 import fs from "node:fs"
 import path from "node:path"
+import postcss from "postcss"
 import * as sass from "sass"
 import { expect, it } from "vitest"
-import { findGlobalSelectors } from "../css-guard"
+import { findGlobalSelectors } from "../../scripts/css-guard.mjs"
 
 const src = path.resolve(__dirname, "..")
 const entry = path.join(src, "yeditor.scss")
@@ -42,3 +43,22 @@ it("guard flags global selectors", () => {
     findGlobalSelectors("body{}html,.a{}* {}::-webkit-scrollbar{}.yeditor ::-webkit-scrollbar{}.body{}"),
   ).toEqual(["body", "html", "*", "::-webkit-scrollbar"])
 })
+
+// Tooltips, popovers and dropdowns portal into document.body, outside .yeditor.
+it("declares font variables on :root so portalled UI can use them", () => {
+  expect(css()).toMatch(/:root\s*\{[^}]*--tt-font-body/)
+})
+
+it.each([".tiptap-tooltip", ".tiptap-popover", ".tiptap-dropdown-menu-content"])(
+  "%s uses the editor font, not the host page's",
+  (selector) => {
+    const fonts: string[] = []
+    postcss.parse(css()).walkRules((rule) => {
+      if (!rule.selectors.includes(selector)) return
+      rule.walkDecls("font-family", (decl) => {
+        fonts.push(decl.value)
+      })
+    })
+    expect(fonts).toContain("var(--tt-font-body)")
+  },
+)
