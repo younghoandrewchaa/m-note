@@ -10,14 +10,25 @@ import { CopyHtmlButton } from '../components/tiptap-ui/copy-html-button'
 import { Frontmatter } from '../components/tiptap-node/frontmatter-node/frontmatter-node-extension'
 import { setMarkdownWithFrontmatter } from '../set-markdown'
 
+class FakeClipboardItem {
+  constructor(public items: Record<string, Blob>) {}
+}
+
 describe('CopyHtmlButton', () => {
-  let writeText: ReturnType<typeof vi.fn>
+  let write: ReturnType<typeof vi.fn>
+
+  // The text/html payload of the first clipboard write.
+  async function copiedHtmlOf(): Promise<string> {
+    const [items] = write.mock.calls[0] as [FakeClipboardItem[]]
+    return items[0].items['text/html'].text()
+  }
   let editor: Editor
 
   beforeEach(() => {
-    writeText = vi.fn().mockResolvedValue(undefined)
+    write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('ClipboardItem', FakeClipboardItem)
     Object.defineProperty(window.navigator, 'clipboard', {
-      value: { writeText },
+      value: { write },
       configurable: true,
       writable: true,
     })
@@ -61,8 +72,8 @@ describe('CopyHtmlButton', () => {
       await Promise.resolve()
     })
 
-    expect(writeText).toHaveBeenCalledOnce()
-    const copiedHtml = writeText.mock.calls[0][0]
+    expect(write).toHaveBeenCalledOnce()
+    const copiedHtml = await copiedHtmlOf()
     expect(copiedHtml).toContain('<h1')
     expect(copiedHtml).toContain('Hello <strong>world</strong>')
     // The output is HTML, not markdown.
@@ -89,7 +100,7 @@ describe('CopyHtmlButton', () => {
       await Promise.resolve()
     })
 
-    const copiedHtml = writeText.mock.calls[0][0] as string
+    const copiedHtml = await copiedHtmlOf()
     expect(copiedHtml).not.toContain('frontmatter')
     expect(copiedHtml).not.toContain('title: Secret')
     expect(copiedHtml).toContain('<h1>Hello</h1>')
