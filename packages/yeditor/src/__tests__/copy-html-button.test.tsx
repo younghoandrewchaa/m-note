@@ -69,8 +69,8 @@ describe('CopyHtmlButton', () => {
     act(() => root.unmount())
   })
 
-  it('renders a check icon after copying', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENV_ENVIRONMENT', true)
+  it('swaps the clipboard icon for the check icon after copying', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const host = document.createElement('div')
     const root = createRoot(host)
 
@@ -79,6 +79,7 @@ describe('CopyHtmlButton', () => {
     })
 
     const button = host.querySelector('button')!
+    const iconBefore = button.querySelector('svg')!.outerHTML
 
     await act(async () => {
       button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -86,9 +87,9 @@ describe('CopyHtmlButton', () => {
       await Promise.resolve()
     })
 
-    // After copying, the check icon should be present.
-    const checkIcon = host.querySelector('svg')
-    expect(checkIcon).not.toBeNull()
+    // Both icons are SVGs, so compare markup to tell them apart.
+    const iconAfter = button.querySelector('svg')!.outerHTML
+    expect(iconAfter).not.toBe(iconBefore)
 
     act(() => root.unmount())
   })
