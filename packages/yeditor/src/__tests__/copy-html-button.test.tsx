@@ -7,6 +7,8 @@ import { Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
 import { CopyHtmlButton } from '../components/tiptap-ui/copy-html-button'
+import { Frontmatter } from '../components/tiptap-node/frontmatter-node/frontmatter-node-extension'
+import { setMarkdownWithFrontmatter } from '../set-markdown'
 
 describe('CopyHtmlButton', () => {
   let writeText: ReturnType<typeof vi.fn>
@@ -67,6 +69,33 @@ describe('CopyHtmlButton', () => {
     expect(copiedHtml).not.toContain('# Hello')
 
     act(() => root.unmount())
+  })
+
+  it('leaves YAML frontmatter out of the copied HTML', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const fmEditor = new Editor({ extensions: [StarterKit, Markdown, Frontmatter] })
+    setMarkdownWithFrontmatter(fmEditor, '---\ntitle: Secret\ntags: [a]\n---\n# Hello')
+    expect(fmEditor.getHTML()).toContain('data-type="frontmatter"')
+
+    const host = document.createElement('div')
+    const root = createRoot(host)
+    await act(async () => {
+      root.render(<CopyHtmlButton editor={fmEditor} />)
+    })
+
+    await act(async () => {
+      host.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const copiedHtml = writeText.mock.calls[0][0] as string
+    expect(copiedHtml).not.toContain('frontmatter')
+    expect(copiedHtml).not.toContain('title: Secret')
+    expect(copiedHtml).toContain('<h1>Hello</h1>')
+
+    act(() => root.unmount())
+    fmEditor.destroy()
   })
 
   it('swaps the clipboard icon for the check icon after copying', async () => {

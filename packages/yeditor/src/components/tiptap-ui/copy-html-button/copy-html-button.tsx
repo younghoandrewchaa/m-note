@@ -9,7 +9,7 @@ import type { ButtonProps } from "../../tiptap-ui-primitive/button"
 import { Button } from "../../tiptap-ui-primitive/button"
 import { ClipboardHtmlCopyIcon } from "../../tiptap-icons/clipboard-html-copy-icon"
 import { CheckIcon } from "../../tiptap-icons/check-icon"
-import { copyHtmlToClipboard } from "../../../lib/copy-html"
+import { copyHtmlToClipboard, getDocumentHtml } from "../../../lib/copy-html"
 
 export interface CopyHtmlButtonProps extends ButtonProps {
   editor?: Editor | null
@@ -28,7 +28,7 @@ export const CopyHtmlButton = forwardRef<
         onClick?.(event)
         if (event.defaultPrevented || !editor) return
 
-        const html = editor.getHTML()
+        const html = getDocumentHtml(editor)
         const didCopy = await copyHtmlToClipboard(html)
         if (!didCopy) return
 
