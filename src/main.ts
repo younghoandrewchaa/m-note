@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, screen, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import { checkForNativeUpdate, configureAutoUpdater, getUpdateState, isInstallingUpdate, installNativeUpdate } from './auto-updater'
 import { prepareWindowsForUpdate, restoreUpdateWindows } from './update-installation'
-import { attachCloseHandler } from './window-close-handler'
+import { buildAppMenuTemplate } from './app-menu'
+import { attachCloseHandler, prepareWindowsForQuit } from './window-close-handler'
+import { createDocumentWindows } from './document-windows'
 import { clearUpdateSession, saveUpdateSession, takeUpdateSession } from './update-session'
 import {
   createDebouncedWindowBoundsWriter,
@@ -21,14 +23,13 @@ if (started) {
 
 const pendingFilePaths: string[] = []
 let appReady = false
-const windowFilePaths = new Map<number, string>()
 let saveWindowBounds: WindowBoundsWriter | null = null
 
 // Must be registered before 'ready' to catch files opened at launch on macOS.
 app.on('open-file', (event, filePath) => {
   event.preventDefault()
   if (appReady) {
-    createWindow(filePath)
+    documents.open(filePath)
   } else {
     pendingFilePaths.push(filePath)
   }
@@ -50,18 +51,34 @@ ipcMain.handle('install-update', () => installNativeUpdate())
 
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url))
 
-ipcMain.handle('open-local-file', (_, filePath: string) => {
+ipcMain.handle('open-local-file', (event, filePath: string) => {
   if (!/\.(md|markdown)$/i.test(filePath)) return false
   if (!fs.existsSync(filePath)) return false
-  createWindow(filePath)
+  documents.open(filePath, BrowserWindow.fromWebContents(event.sender))
   return true
 })
 
 ipcMain.handle('set-file-path', (event, filePath: string) => {
-  windowFilePaths.set(event.sender.id, filePath)
+  documents.setFilePath(event.sender.id, filePath)
 })
 
-const createWindow = (filePath?: string) => {
+ipcMain.on('set-dirty', (event, dirty: unknown) => {
+  documents.setDirty(event.sender.id, dirty === true)
+})
+
+ipcMain.handle('show-save-dialog', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  const options = {
+    defaultPath: 'Untitled.md',
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+  }
+  const result = window
+    ? await dialog.showSaveDialog(window, options)
+    : await dialog.showSaveDialog(options)
+  return result.canceled || !result.filePath ? null : result.filePath
+})
+
+const createWindow = () => {
   const primaryDisplay = screen.getPrimaryDisplay()
   const defaultBounds = getDefaultWindowBounds(primaryDisplay.workAreaSize)
   const workAreas: WindowBounds[] = screen.getAllDisplays().map((display) => display.workArea)
@@ -70,6 +87,7 @@ const createWindow = (filePath?: string) => {
 
   const mainWindow = new BrowserWindow({
     ...windowBounds,
+    tabbingIdentifier: 'm-note',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
     },
@@ -83,15 +101,6 @@ const createWindow = (filePath?: string) => {
 
   mainWindow.on('move', rememberCurrentBounds)
   mainWindow.on('resize', rememberCurrentBounds)
-
-  if (filePath) {
-    windowFilePaths.set(mainWindow.webContents.id, filePath)
-  }
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    const storedPath = windowFilePaths.get(mainWindow.webContents.id)
-    if (storedPath) mainWindow.webContents.send('file-opened', storedPath)
-  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -110,13 +119,19 @@ const createWindow = (filePath?: string) => {
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
+
+  return mainWindow
 }
+
+const documents = createDocumentWindows(createWindow)
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   appReady = true
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate({ newTab: () => documents.newTab() })))
+  app.on('new-window-for-tab', () => documents.newTab())
   saveWindowBounds = createDebouncedWindowBoundsWriter(app.getPath('userData'))
   configureAutoUpdater({
     isPackaged: app.isPackaged,
@@ -124,10 +139,14 @@ app.on('ready', () => {
       const windows = BrowserWindow.getAllWindows()
       if (!(await prepareWindowsForUpdate(windows))) return false
       // Save after preparation: an untitled note may now have a file path.
-      saveUpdateSession(app.getPath('userData'), windows.flatMap((window) => {
-        const filePath = windowFilePaths.get(window.webContents.id)
-        return filePath ? [filePath] : []
-      }))
+      const activeWindow = BrowserWindow.getFocusedWindow() ?? documents.anchor()
+      saveUpdateSession(app.getPath('userData'), {
+        files: windows.flatMap((window) => {
+          const filePath = documents.filePathOf(window)
+          return filePath ? [filePath] : []
+        }),
+        activeFile: activeWindow ? documents.filePathOf(activeWindow) : null,
+      })
       return true
     },
     restoreWindows: () => {
@@ -150,7 +169,8 @@ app.on('ready', () => {
   for (const p of argFilePaths) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
-  for (const p of takeUpdateSession(app.getPath('userData'))) {
+  const updateSession = takeUpdateSession(app.getPath('userData'))
+  for (const p of updateSession.files) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
 
@@ -173,12 +193,11 @@ app.on('ready', () => {
     })
   }
 
-  if (pendingFilePaths.length > 0) {
-    for (const p of pendingFilePaths.splice(0)) {
-      createWindow(p)
-    }
-  } else {
-    createWindow()
+  const opened = pendingFilePaths.splice(0).map((p) => documents.open(p))
+  if (opened.length === 0) {
+    documents.newTab()
+  } else if (updateSession.activeFile) {
+    opened.find((window) => documents.filePathOf(window) === updateSession.activeFile)?.focus()
   }
 })
 
@@ -189,8 +208,16 @@ app.on('window-all-closed', () => {
 
 // Flushes any bounds still pending in the debounce timer so a move/resize
 // followed immediately by quit (e.g. a Rectangle snap then Cmd+Q) isn't lost.
-app.on('before-quit', () => {
+let quitApproved = false
+app.on('before-quit', (event) => {
   saveWindowBounds?.flush()
+  if (quitApproved || isInstallingUpdate()) return
+  event.preventDefault()
+  void prepareWindowsForQuit(BrowserWindow.getAllWindows(), documents.isDirty).then((ready) => {
+    if (!ready) return
+    quitApproved = true
+    app.quit()
+  })
 })
 
 // In this file you can include the rest of your app's specific main process

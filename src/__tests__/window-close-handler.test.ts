@@ -18,6 +18,7 @@ vi.mock('electron', () => ({
 import {
   attachCloseHandler,
   prepareWindowForClose,
+  prepareWindowsForQuit,
 } from '../window-close-handler'
 function windowMock() {
   const win = new EventEmitter() as any
@@ -26,6 +27,8 @@ function windowMock() {
     send: vi.fn(),
   }
   win.close = vi.fn()
+  win.focus = vi.fn()
+  win.isDestroyed = vi.fn(() => false)
   return win
 }
 beforeEach(() => {
@@ -144,4 +147,52 @@ it('times out when the renderer never returns its dirty state', async () => {
   await vi.advanceTimersByTimeAsync(30_000)
   await assertion
   vi.useRealTimers()
+})
+it('focuses each unsaved tab before its prompt', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  const order: string[] = []
+  a.focus.mockImplementation(() => order.push('focus a'))
+  b.focus.mockImplementation(() => order.push('focus b'))
+  mocks.dialog.showMessageBoxSync.mockImplementation((win: any) => {
+    order.push(win === a ? 'prompt a' : 'prompt b')
+    return 1
+  })
+  expect(await prepareWindowsForQuit([a, b], () => true)).toBe(true)
+  expect(order).toEqual(['focus a', 'prompt a', 'focus b', 'prompt b'])
+})
+it('skips clean tabs', async () => {
+  const win = windowMock()
+  win.webContents.executeJavaScript.mockResolvedValue(false)
+  expect(await prepareWindowsForQuit([win], () => false)).toBe(true)
+  expect(win.focus).not.toHaveBeenCalled()
+  expect(mocks.dialog.showMessageBoxSync).not.toHaveBeenCalled()
+})
+it('cancel stops the quit and keeps every tab', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  mocks.dialog.showMessageBoxSync.mockReturnValueOnce(1).mockReturnValueOnce(2)
+  expect(await prepareWindowsForQuit([a, b], () => true)).toBe(false)
+  attachCloseHandler(a)
+  const event = { preventDefault: vi.fn() }
+  a.emit('close', event)
+  expect(event.preventDefault).toHaveBeenCalled()
+})
+it('a second quit while prompting reuses the first', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  mocks.dialog.showMessageBoxSync.mockReturnValue(1)
+  const first = prepareWindowsForQuit([a, b], () => true)
+  const second = prepareWindowsForQuit([a, b], () => true)
+  expect(second).toBe(first)
+  await first
+  expect(mocks.dialog.showMessageBoxSync).toHaveBeenCalledTimes(2)
+})
+it('quit walk reports a failed prepare and resets approvals', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  mocks.dialog.showMessageBoxSync.mockReturnValue(1)
+  b.webContents.executeJavaScript.mockRejectedValue(new Error('renderer gone'))
+  expect(await prepareWindowsForQuit([a, b], () => true)).toBe(false)
+  expect(mocks.dialog.showErrorBox).toHaveBeenCalledWith('Unable to save', 'renderer gone')
+  const event = { preventDefault: vi.fn() }
+  attachCloseHandler(a)
+  a.emit('close', event)
+  expect(event.preventDefault).toHaveBeenCalled()
 })

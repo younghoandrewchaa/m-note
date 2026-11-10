@@ -102,6 +102,12 @@ export async function prepareWindowForClose(
     window.webContents.send('save-before-close', { requestId, savePath })
   })
 }
+function showSaveError(error: unknown) {
+  dialog.showErrorBox(
+    'Unable to save',
+    error instanceof Error ? error.message : 'Please retry saving your note.',
+  )
+}
 export function attachCloseHandler(window: BrowserWindow) {
   window.on('close', (event) => {
     if (approved.has(window)) return
@@ -115,14 +121,40 @@ export function attachCloseHandler(window: BrowserWindow) {
           window.close()
         }
       })
-      .catch((error) => {
-        dialog.showErrorBox(
-          'Unable to save',
-          error instanceof Error
-            ? error.message
-            : 'Please retry saving your note.',
-        )
-      })
+      .catch(showSaveError)
       .finally(() => pending.delete(window))
   })
+}
+let quitInFlight: Promise<boolean> | null = null
+async function walkWindowsForQuit(
+  windows: BrowserWindow[],
+  isDirty: (window: BrowserWindow) => boolean,
+): Promise<boolean> {
+  try {
+    for (const window of windows) {
+      if (window.isDestroyed()) continue
+      if (isDirty(window)) window.focus()
+      if (!(await prepareWindowForClose(window))) {
+        windows.forEach(resetWindowClose)
+        return false
+      }
+      approveWindowClose(window)
+    }
+    return true
+  } catch (error) {
+    windows.forEach(resetWindowClose)
+    showSaveError(error)
+    return false
+  }
+}
+export function prepareWindowsForQuit(
+  windows: BrowserWindow[],
+  isDirty: (window: BrowserWindow) => boolean,
+): Promise<boolean> {
+  if (quitInFlight) return quitInFlight
+  const walk = walkWindowsForQuit(windows, isDirty).finally(() => {
+    quitInFlight = null
+  })
+  quitInFlight = walk
+  return walk
 }

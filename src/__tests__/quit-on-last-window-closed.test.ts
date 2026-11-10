@@ -4,6 +4,7 @@ const mockQuit = vi.fn()
 const appHandlers: Record<string, (...args: unknown[]) => void> = {}
 
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     quit: () => mockQuit(),
     getPath: vi.fn(() => '/user/data'),
@@ -22,7 +23,12 @@ vi.mock('electron', () => ({
       send() {
         // no-op
       },
+      isLoading: () => false,
     }
+    addTabbedWindow = vi.fn()
+    focus = vi.fn()
+    setTitle = vi.fn()
+    isDestroyed = () => false
     getBounds() {
       return { x: 0, y: 0, width: 720, height: 900 }
     }
@@ -36,8 +42,11 @@ vi.mock('electron', () => ({
       // no-op
     }
     static getAllWindows(): unknown[] { return [] }
+    static fromWebContents(): null { return null }
+    static getFocusedWindow(): null { return null }
   },
-  ipcMain: { handle: vi.fn() },
+  ipcMain: { handle: vi.fn(), on: vi.fn() },
+  dialog: { showSaveDialog: vi.fn() },
   screen: {
     getPrimaryDisplay: () => ({ workAreaSize: { width: 1440, height: 900 } }),
     getAllDisplays: () => [

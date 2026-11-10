@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 type Handler = (...args: unknown[]) => unknown
 interface TestWindow extends EventEmitter {
   webContents: EventEmitter & { id: number; send: ReturnType<typeof vi.fn> }
+  focus: ReturnType<typeof vi.fn>
 }
 const mocks = vi.hoisted(() => ({
   app: new Map<string, Handler>(),
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
 }))
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     getPath: () => mocks.userData,
     on: (event: string, fn: Handler) => mocks.app.set(event, fn),
@@ -27,13 +29,20 @@ vi.mock('electron', () => ({
     webContents = Object.assign(new EventEmitter(), {
       id: mocks.windows.length + 1,
       send: vi.fn(),
+      isLoading: () => false,
     })
+    addTabbedWindow = vi.fn()
+    focus = vi.fn()
+    setTitle = vi.fn()
     constructor() { super(); mocks.windows.push(this) }
     loadFile() { return Promise.resolve() }
     isDestroyed() { return false }
     static getAllWindows() { return mocks.windows }
+    static fromWebContents(): null { return null }
+    static getFocusedWindow(): null { return null }
   },
-  ipcMain: { handle: (name: string, fn: Handler) => mocks.ipc.set(name, fn) },
+  ipcMain: { handle: (name: string, fn: Handler) => mocks.ipc.set(name, fn), on: vi.fn() },
+  dialog: { showSaveDialog: vi.fn() },
   screen: {
     getPrimaryDisplay: () => ({ workAreaSize: { width: 1440, height: 900 } }),
     getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1440, height: 900 } }],
@@ -154,3 +163,13 @@ it.each(['invalid json', '{}', '[null, 42, "missing.md"]'])(
     expect(fs.existsSync(path.join(mocks.userData, 'update-session.json'))).toBe(false)
   },
 )
+
+it('restores the active tab after an update restart', async () => {
+  await launch([first, second])
+  mocks.windows[0].emit('focus')
+  await options().prepareInstall()
+  await launch()
+  expect(openedFiles()).toEqual([first, second])
+  expect(mocks.windows[0].focus).toHaveBeenCalledOnce()
+  expect(mocks.windows[1].focus).not.toHaveBeenCalled()
+})

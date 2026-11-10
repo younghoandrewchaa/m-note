@@ -21,8 +21,6 @@ import {
 
 import "./note-editor.scss"
 
-const fileName = (path: string) => path.split("/").pop() ?? path
-
 /** Opens a link from the editor: local .md files in M Note, everything else in the browser. */
 export function openNoteLink(url: string, currentFilePath: string | null): void {
   if (isLocalMarkdownLink(url)) {
@@ -49,27 +47,32 @@ export function NoteEditor() {
     setCurrentFilePath(path)
     isDirtyRef.current = false
     setIsDirty(false)
-    document.title = fileName(path)
+    window.electronAPI?.setDirty(false)
   }, [])
 
   const handleChange = useCallback(() => {
     if (isDirtyRef.current) return
     isDirtyRef.current = true
     setIsDirty(true)
-    if (currentFilePathRef.current) {
-      document.title = `● ${fileName(currentFilePathRef.current)}`
-    }
+    window.electronAPI?.setDirty(true)
   }, [])
 
   const handleSave = useCallback(async () => {
     const handle = editorRef.current
     const editor = handle?.editor
-    const path = currentFilePathRef.current
-    if (!handle || !editor || !path || !window.electronAPI) return
+    if (!handle || !editor || !window.electronAPI) return
     if (isEditorUpdateFrozen(editor)) return
+    const isNewFile = !currentFilePathRef.current
+    const path = currentFilePathRef.current ?? (await window.electronAPI.showSaveDialog())
+    if (!path) return
     await runEditorTask(editor, async () => {
       const markdown = handle.getMarkdown()
       await window.electronAPI.saveFile(path, markdown)
+      if (isNewFile) {
+        await window.electronAPI.setFilePath(path)
+        currentFilePathRef.current = path
+        setCurrentFilePath(path)
+      }
       if (handle.getMarkdown() !== markdown) return
       markClean(path)
     })
@@ -147,20 +150,7 @@ export function NoteEditor() {
       const files = e.dataTransfer?.files
       if (!files?.length) return
 
-      void runEditorTask(editor, () =>
-        handleFileDrop(files, window.electronAPI, {
-          setContent: (markdown) => handle.setMarkdown(markdown),
-          setFilePath: (path) => {
-            setCurrentFilePath(path)
-            currentFilePathRef.current = path
-            setIsDirty(false)
-            isDirtyRef.current = false
-          },
-          setTitle: (name) => {
-            document.title = name
-          },
-        }),
-      ).catch((error) => {
+      handleFileDrop(files, window.electronAPI).catch((error) => {
         console.error("Unable to open dropped file:", error)
       })
     }
@@ -181,7 +171,7 @@ export function NoteEditor() {
         onReady={setHandle}
         onChange={handleChange}
         onSave={handleSave}
-        canSave={isDirty && currentFilePath !== null}
+        canSave={isDirty}
         onOpenLink={handleOpenLink}
         toolbarEnd={
           <>
