@@ -124,10 +124,13 @@ app.on('ready', () => {
       const windows = BrowserWindow.getAllWindows()
       if (!(await prepareWindowsForUpdate(windows))) return false
       // Save after preparation: an untitled note may now have a file path.
-      saveUpdateSession(app.getPath('userData'), windows.flatMap((window) => {
-        const filePath = windowFilePaths.get(window.webContents.id)
-        return filePath ? [filePath] : []
-      }))
+      saveUpdateSession(app.getPath('userData'), {
+        files: windows.flatMap((window) => {
+          const filePath = windowFilePaths.get(window.webContents.id)
+          return filePath ? [filePath] : []
+        }),
+        activeFile: null,
+      })
       return true
     },
     restoreWindows: () => {
@@ -150,7 +153,7 @@ app.on('ready', () => {
   for (const p of argFilePaths) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
-  for (const p of takeUpdateSession(app.getPath('userData'))) {
+  for (const p of takeUpdateSession(app.getPath('userData')).files) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
 
