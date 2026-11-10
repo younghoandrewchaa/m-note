@@ -46,7 +46,13 @@ export function createDocumentWindows(makeWindow: () => BrowserWindow): Document
     window.on('page-title-updated', (event) => event.preventDefault())
     // Sent on every load so Cmd+R reload restores the document.
     window.webContents.on('did-finish-load', () => {
-      if (entry.doc.filePath) window.webContents.send('file-opened', entry.doc.filePath)
+      if (entry.doc.filePath) {
+        window.webContents.send('file-opened', entry.doc.filePath)
+      } else if (entry.doc.dirty) {
+        // A reload discards an untitled tab's edits and no file-opened follows.
+        entry.doc.dirty = false
+        updateTitle(entry)
+      }
     })
 
     updateTitle(entry)

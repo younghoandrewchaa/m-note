@@ -89,6 +89,23 @@ describe('document windows', () => {
     expect(title(documents.newTab())).toBe('Untitled')
   })
 
+  it('clears an untitled tab dirty flag when it reloads', () => {
+    const tab = documents.newTab()
+    documents.setDirty(fake(tab).webContents.id, true)
+    expect(title(tab)).toBe('● Untitled')
+    fake(tab).webContents.emit('did-finish-load')
+    expect(title(tab)).toBe('Untitled')
+    expect(documents.isDirty(tab)).toBe(false)
+  })
+
+  it('keeps a saved document dirty flag on reload', () => {
+    const tab = documents.open(a)
+    documents.setDirty(fake(tab).webContents.id, true)
+    fake(tab).webContents.emit('did-finish-load')
+    expect(documents.isDirty(tab)).toBe(true)
+    expect(title(tab)).toBe('● a.md')
+  })
+
   it('shows unsaved changes in the title', () => {
     const window = documents.open(a)
     const id = fake(window).webContents.id
