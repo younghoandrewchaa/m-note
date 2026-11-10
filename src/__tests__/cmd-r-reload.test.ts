@@ -43,6 +43,7 @@ const appHandlers: Record<string, (...args: unknown[]) => void> = {}
 const ipcHandlers: Record<string, (event: { sender: { id: number } }, ...args: unknown[]) => unknown> = {}
 
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     quit: vi.fn(),
     getPath: vi.fn(() => '/user/data'),

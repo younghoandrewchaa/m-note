@@ -4,6 +4,7 @@ const mockQuit = vi.fn()
 const appHandlers: Record<string, (...args: unknown[]) => void> = {}
 
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     quit: () => mockQuit(),
     getPath: vi.fn(() => '/user/data'),

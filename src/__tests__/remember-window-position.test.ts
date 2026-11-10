@@ -10,6 +10,7 @@ const windowListeners: Record<string, Array<() => void>> = {}
 let nextWebContentsId = 1
 
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     isPackaged: false,
     getPath: vi.fn(() => '/user/data'),

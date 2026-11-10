@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, screen, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, screen, session, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import { checkForNativeUpdate, configureAutoUpdater, getUpdateState, isInstallingUpdate, installNativeUpdate } from './auto-updater'
 import { prepareWindowsForUpdate, restoreUpdateWindows } from './update-installation'
+import { buildAppMenuTemplate } from './app-menu'
 import { attachCloseHandler } from './window-close-handler'
 import { createDocumentWindows } from './document-windows'
 import { clearUpdateSession, saveUpdateSession, takeUpdateSession } from './update-session'
@@ -113,6 +114,8 @@ const documents = createDocumentWindows(createWindow)
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   appReady = true
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate({ newTab: () => documents.newTab() })))
+  app.on('new-window-for-tab', () => documents.newTab())
   saveWindowBounds = createDebouncedWindowBoundsWriter(app.getPath('userData'))
   configureAutoUpdater({
     isPackaged: app.isPackaged,

@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
 }))
 vi.mock('electron', () => ({
+  Menu: { setApplicationMenu: vi.fn(), buildFromTemplate: vi.fn() },
   app: {
     getPath: () => mocks.userData,
     on: (event: string, fn: Handler) => mocks.app.set(event, fn),
