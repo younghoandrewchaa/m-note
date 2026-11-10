@@ -65,6 +65,7 @@ import "./components/tiptap-node/table-node/table-node.scss"
 import { HeadingDropdownMenu } from "./components/tiptap-ui/heading-dropdown-menu"
 import { ImageUploadButton } from "./components/tiptap-ui/image-upload-button"
 import { CopyMarkdownButton } from "./components/tiptap-ui/copy-markdown-button"
+import { CopyHtmlButton } from "./components/tiptap-ui/copy-html-button"
 import { SaveButton } from "./components/tiptap-ui/save-button"
 import { InlineCodeCopyButton } from "./components/tiptap-ui/inline-code-copy"
 import { ListDropdownMenu } from "./components/tiptap-ui/list-dropdown-menu"
@@ -226,6 +227,7 @@ const MainToolbarContent = ({
       <ToolbarGroup>
         {onSave && <SaveButton onSave={onSave} canSave={canSave} />}
         <CopyMarkdownButton />
+        <CopyHtmlButton />
         {toolbarEnd}
       </ToolbarGroup>
 
