@@ -62,7 +62,10 @@ vi.mock('../auto-updater', () => ({
   installNativeUpdate: vi.fn(),
 }))
 vi.mock('../update-checker', () => ({ checkForUpdate: vi.fn() }))
-vi.mock('../window-close-handler', () => ({ attachCloseHandler: vi.fn() }))
+vi.mock('../window-close-handler', () => ({
+  attachCloseHandler: vi.fn(),
+  prepareWindowsForQuit: vi.fn(() => new Promise(() => {})),
+}))
 vi.mock('node:fs', () => ({
   default: {
     existsSync: vi.fn(() => false),
@@ -194,7 +197,7 @@ describe('remember window position', () => {
 
     // Simulate quitting immediately after a Rectangle-style resize, before
     // the 250ms debounce would otherwise have written the file.
-    appHandlers['before-quit']()
+    appHandlers['before-quit']({ preventDefault: vi.fn() })
 
     expect(fs.default.writeFileSync).toHaveBeenCalledWith(
       '/user/data/window-state.json',

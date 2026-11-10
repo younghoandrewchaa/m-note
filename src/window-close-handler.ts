@@ -126,3 +126,41 @@ export function attachCloseHandler(window: BrowserWindow) {
       .finally(() => pending.delete(window))
   })
 }
+let quitInFlight: Promise<boolean> | null = null
+async function walkWindowsForQuit(
+  windows: BrowserWindow[],
+  isDirty: (window: BrowserWindow) => boolean,
+): Promise<boolean> {
+  try {
+    for (const window of windows) {
+      if (window.isDestroyed()) continue
+      if (isDirty(window)) window.focus()
+      if (!(await prepareWindowForClose(window))) {
+        windows.forEach(resetWindowClose)
+        return false
+      }
+      approveWindowClose(window)
+    }
+    return true
+  } catch (error) {
+    windows.forEach(resetWindowClose)
+    dialog.showErrorBox(
+      'Unable to save',
+      error instanceof Error
+        ? error.message
+        : 'Please retry saving your note.',
+    )
+    return false
+  }
+}
+export function prepareWindowsForQuit(
+  windows: BrowserWindow[],
+  isDirty: (window: BrowserWindow) => boolean,
+): Promise<boolean> {
+  if (quitInFlight) return quitInFlight
+  const walk = walkWindowsForQuit(windows, isDirty).finally(() => {
+    quitInFlight = null
+  })
+  quitInFlight = walk
+  return walk
+}

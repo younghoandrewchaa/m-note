@@ -5,7 +5,7 @@ import started from 'electron-squirrel-startup'
 import { checkForNativeUpdate, configureAutoUpdater, getUpdateState, isInstallingUpdate, installNativeUpdate } from './auto-updater'
 import { prepareWindowsForUpdate, restoreUpdateWindows } from './update-installation'
 import { buildAppMenuTemplate } from './app-menu'
-import { attachCloseHandler } from './window-close-handler'
+import { attachCloseHandler, prepareWindowsForQuit } from './window-close-handler'
 import { createDocumentWindows } from './document-windows'
 import { clearUpdateSession, saveUpdateSession, takeUpdateSession } from './update-session'
 import {
@@ -192,8 +192,16 @@ app.on('window-all-closed', () => {
 
 // Flushes any bounds still pending in the debounce timer so a move/resize
 // followed immediately by quit (e.g. a Rectangle snap then Cmd+Q) isn't lost.
-app.on('before-quit', () => {
+let quitApproved = false
+app.on('before-quit', (event) => {
   saveWindowBounds?.flush()
+  if (quitApproved || isInstallingUpdate()) return
+  event.preventDefault()
+  void prepareWindowsForQuit(BrowserWindow.getAllWindows(), documents.isDirty).then((ready) => {
+    if (!ready) return
+    quitApproved = true
+    app.quit()
+  })
 })
 
 // In this file you can include the rest of your app's specific main process
