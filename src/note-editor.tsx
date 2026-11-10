@@ -68,7 +68,11 @@ export function NoteEditor() {
     await runEditorTask(editor, async () => {
       const markdown = handle.getMarkdown()
       await window.electronAPI.saveFile(path, markdown)
-      if (isNewFile) await window.electronAPI.setFilePath(path)
+      if (isNewFile) {
+        await window.electronAPI.setFilePath(path)
+        currentFilePathRef.current = path
+        setCurrentFilePath(path)
+      }
       if (handle.getMarkdown() !== markdown) return
       markClean(path)
     })

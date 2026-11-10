@@ -124,7 +124,32 @@ it("cancelling Save As saves nothing", async () => {
   typeText("hello")
   pressModS()
   await vi.waitFor(() => expect(api.showSaveDialog).toHaveBeenCalled())
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  })
   expect(api.saveFile).not.toHaveBeenCalled()
+  expect(api.setFilePath).not.toHaveBeenCalled()
+})
+
+it("keeps the chosen path when edited during an untitled save", async () => {
+  api.showSaveDialog.mockResolvedValue("/d/new.md")
+  let finishSave!: () => void
+  api.saveFile.mockImplementationOnce(
+    () => new Promise<void>((resolve) => (finishSave = resolve)),
+  )
+  typeText("hello")
+  pressModS()
+  await vi.waitFor(() => expect(api.saveFile).toHaveBeenCalled())
+  typeText(" more")
+  await act(async () => finishSave())
+  await vi.waitFor(() => expect(api.setFilePath).toHaveBeenCalledWith("/d/new.md"))
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  })
+  pressModS()
+  await vi.waitFor(() => expect(api.saveFile).toHaveBeenCalledTimes(2))
+  expect(api.saveFile.mock.calls[1][0]).toBe("/d/new.md")
+  expect(api.showSaveDialog).toHaveBeenCalledTimes(1)
 })
 
 it("Cmd+S saves markdown to the current path", async () => {
