@@ -22,7 +22,12 @@ vi.mock('electron', () => ({
       send() {
         // no-op
       },
+      isLoading: () => false,
     }
+    addTabbedWindow = vi.fn()
+    focus = vi.fn()
+    setTitle = vi.fn()
+    isDestroyed = () => false
     getBounds() {
       return { x: 0, y: 0, width: 720, height: 900 }
     }
@@ -36,6 +41,8 @@ vi.mock('electron', () => ({
       // no-op
     }
     static getAllWindows(): unknown[] { return [] }
+    static fromWebContents(): null { return null }
+    static getFocusedWindow(): null { return null }
   },
   ipcMain: { handle: vi.fn() },
   screen: {

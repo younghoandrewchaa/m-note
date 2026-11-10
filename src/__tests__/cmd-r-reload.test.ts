@@ -4,6 +4,7 @@ type MockWebContents = {
   id: number
   handlers: Record<string, Array<{ fn: (...a: unknown[]) => void; once: boolean }>>
   send: ReturnType<typeof vi.fn>
+  isLoading: () => boolean
   on(event: string, fn: (...a: unknown[]) => void): void
   once(event: string, fn: (...a: unknown[]) => void): void
   emit(event: string, ...args: unknown[]): void
@@ -19,6 +20,7 @@ function createMockWebContents(): MockWebContents {
     id,
     handlers,
     send: vi.fn(),
+    isLoading: () => false,
     on(event, fn) {
       (handlers[event] ??= []).push({ fn, once: false })
     },
@@ -50,6 +52,10 @@ vi.mock('electron', () => ({
   },
   BrowserWindow: class MockBW {
     webContents: MockWebContents
+    addTabbedWindow = vi.fn()
+    focus = vi.fn()
+    setTitle = vi.fn()
+    isDestroyed = () => false
     constructor() {
       this.webContents = createMockWebContents()
       capturedWebContents = this.webContents
@@ -67,6 +73,8 @@ vi.mock('electron', () => ({
       // no-op
     }
     static getAllWindows(): unknown[] { return [] }
+    static fromWebContents(): null { return null }
+    static getFocusedWindow(): null { return null }
   },
   ipcMain: {
     handle: (channel: string, fn: (event: { sender: { id: number } }, ...args: unknown[]) => unknown) => {
@@ -93,7 +101,11 @@ vi.mock('node:fs', () => ({
   },
 }))
 vi.mock('node:path', () => ({
-  default: { join: (...parts: string[]) => parts.join('/') },
+  default: {
+    join: (...parts: string[]) => parts.join('/'),
+    resolve: (p: string) => p,
+    basename: (p: string) => p.split('/').pop(),
+  },
 }))
 
 beforeAll(async () => {

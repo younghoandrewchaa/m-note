@@ -7,6 +7,7 @@ const appHandlers: Record<string, (...args: any[]) => void> = {}
 const browserWindowOptions: MockBrowserWindowOptions[] = []
 const mockGetBounds = vi.fn<() => MockBounds>()
 const windowListeners: Record<string, Array<() => void>> = {}
+let nextWebContentsId = 1
 
 vi.mock('electron', () => ({
   app: {
@@ -18,7 +19,11 @@ vi.mock('electron', () => ({
     quit: vi.fn(),
   },
   BrowserWindow: class MockBW {
-    webContents = { id: 1, on: vi.fn(), send: vi.fn() }
+    webContents = { id: nextWebContentsId++, on: vi.fn(), send: vi.fn(), isLoading: () => false }
+    addTabbedWindow = vi.fn()
+    focus = vi.fn()
+    setTitle = vi.fn()
+    isDestroyed = () => false
     constructor(options: MockBrowserWindowOptions) {
       browserWindowOptions.push(options)
     }
@@ -33,6 +38,8 @@ vi.mock('electron', () => ({
       // no-op
     }
     static getAllWindows(): unknown[] { return [] }
+    static fromWebContents(): null { return null }
+    static getFocusedWindow(): null { return null }
   },
   ipcMain: { handle: vi.fn() },
   screen: {
@@ -65,7 +72,11 @@ vi.mock('node:fs', () => ({
   },
 }))
 vi.mock('node:path', () => ({
-  default: { join: (...parts: string[]) => parts.join('/') },
+  default: {
+    join: (...parts: string[]) => parts.join('/'),
+    resolve: (p: string) => p,
+    basename: (p: string) => p.split('/').pop(),
+  },
 }))
 
 async function importFreshMain() {
@@ -214,6 +225,9 @@ describe('remember window position', () => {
     vi.mocked(fs.default.existsSync).mockReturnValue(false)
     await importFreshMain()
 
+    // The first window holds a document, so the next file opens a new window
+    // instead of loading into an unedited Untitled one.
+    appHandlers['open-file']({ preventDefault: vi.fn() }, '/notes/first.md')
     appHandlers.ready()
     mockGetBounds.mockReturnValue({ x: 60, y: 70, width: 1000, height: 740 })
     windowListeners.resize[0]()

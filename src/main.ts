@@ -5,6 +5,7 @@ import started from 'electron-squirrel-startup'
 import { checkForNativeUpdate, configureAutoUpdater, getUpdateState, isInstallingUpdate, installNativeUpdate } from './auto-updater'
 import { prepareWindowsForUpdate, restoreUpdateWindows } from './update-installation'
 import { attachCloseHandler } from './window-close-handler'
+import { createDocumentWindows } from './document-windows'
 import { clearUpdateSession, saveUpdateSession, takeUpdateSession } from './update-session'
 import {
   createDebouncedWindowBoundsWriter,
@@ -21,14 +22,13 @@ if (started) {
 
 const pendingFilePaths: string[] = []
 let appReady = false
-const windowFilePaths = new Map<number, string>()
 let saveWindowBounds: WindowBoundsWriter | null = null
 
 // Must be registered before 'ready' to catch files opened at launch on macOS.
 app.on('open-file', (event, filePath) => {
   event.preventDefault()
   if (appReady) {
-    createWindow(filePath)
+    documents.open(filePath)
   } else {
     pendingFilePaths.push(filePath)
   }
@@ -50,18 +50,18 @@ ipcMain.handle('install-update', () => installNativeUpdate())
 
 ipcMain.handle('open-external', (_, url: string) => shell.openExternal(url))
 
-ipcMain.handle('open-local-file', (_, filePath: string) => {
+ipcMain.handle('open-local-file', (event, filePath: string) => {
   if (!/\.(md|markdown)$/i.test(filePath)) return false
   if (!fs.existsSync(filePath)) return false
-  createWindow(filePath)
+  documents.open(filePath, BrowserWindow.fromWebContents(event.sender))
   return true
 })
 
 ipcMain.handle('set-file-path', (event, filePath: string) => {
-  windowFilePaths.set(event.sender.id, filePath)
+  documents.setFilePath(event.sender.id, filePath)
 })
 
-const createWindow = (filePath?: string) => {
+const createWindow = () => {
   const primaryDisplay = screen.getPrimaryDisplay()
   const defaultBounds = getDefaultWindowBounds(primaryDisplay.workAreaSize)
   const workAreas: WindowBounds[] = screen.getAllDisplays().map((display) => display.workArea)
@@ -70,6 +70,7 @@ const createWindow = (filePath?: string) => {
 
   const mainWindow = new BrowserWindow({
     ...windowBounds,
+    tabbingIdentifier: 'm-note',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
     },
@@ -83,15 +84,6 @@ const createWindow = (filePath?: string) => {
 
   mainWindow.on('move', rememberCurrentBounds)
   mainWindow.on('resize', rememberCurrentBounds)
-
-  if (filePath) {
-    windowFilePaths.set(mainWindow.webContents.id, filePath)
-  }
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    const storedPath = windowFilePaths.get(mainWindow.webContents.id)
-    if (storedPath) mainWindow.webContents.send('file-opened', storedPath)
-  })
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -110,7 +102,11 @@ const createWindow = (filePath?: string) => {
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
+
+  return mainWindow
 }
+
+const documents = createDocumentWindows(createWindow)
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -124,12 +120,13 @@ app.on('ready', () => {
       const windows = BrowserWindow.getAllWindows()
       if (!(await prepareWindowsForUpdate(windows))) return false
       // Save after preparation: an untitled note may now have a file path.
+      const activeWindow = BrowserWindow.getFocusedWindow() ?? documents.anchor()
       saveUpdateSession(app.getPath('userData'), {
         files: windows.flatMap((window) => {
-          const filePath = windowFilePaths.get(window.webContents.id)
+          const filePath = documents.filePathOf(window)
           return filePath ? [filePath] : []
         }),
-        activeFile: null,
+        activeFile: activeWindow ? documents.filePathOf(activeWindow) : null,
       })
       return true
     },
@@ -153,7 +150,8 @@ app.on('ready', () => {
   for (const p of argFilePaths) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
-  for (const p of takeUpdateSession(app.getPath('userData')).files) {
+  const updateSession = takeUpdateSession(app.getPath('userData'))
+  for (const p of updateSession.files) {
     if (!pendingFilePaths.includes(p)) pendingFilePaths.push(p)
   }
 
@@ -176,12 +174,11 @@ app.on('ready', () => {
     })
   }
 
-  if (pendingFilePaths.length > 0) {
-    for (const p of pendingFilePaths.splice(0)) {
-      createWindow(p)
-    }
-  } else {
-    createWindow()
+  const opened = pendingFilePaths.splice(0).map((p) => documents.open(p))
+  if (opened.length === 0) {
+    documents.newTab()
+  } else if (updateSession.activeFile) {
+    opened.find((window) => documents.filePathOf(window) === updateSession.activeFile)?.focus()
   }
 })
 
