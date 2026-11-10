@@ -64,7 +64,7 @@ vi.mock('../auto-updater', () => ({
 vi.mock('../update-checker', () => ({ checkForUpdate: vi.fn() }))
 vi.mock('../window-close-handler', () => ({
   attachCloseHandler: vi.fn(),
-  prepareWindowsForQuit: vi.fn(() => new Promise(() => {})),
+  prepareWindowsForQuit: vi.fn(() => new Promise<boolean>(() => undefined)),
 }))
 vi.mock('node:fs', () => ({
   default: {
