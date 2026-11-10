@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, screen, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
@@ -60,6 +60,22 @@ ipcMain.handle('open-local-file', (event, filePath: string) => {
 
 ipcMain.handle('set-file-path', (event, filePath: string) => {
   documents.setFilePath(event.sender.id, filePath)
+})
+
+ipcMain.on('set-dirty', (event, dirty: unknown) => {
+  documents.setDirty(event.sender.id, dirty === true)
+})
+
+ipcMain.handle('show-save-dialog', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  const options = {
+    defaultPath: 'Untitled.md',
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+  }
+  const result = window
+    ? await dialog.showSaveDialog(window, options)
+    : await dialog.showSaveDialog(options)
+  return result.canceled || !result.filePath ? null : result.filePath
 })
 
 const createWindow = () => {

@@ -41,7 +41,8 @@ vi.mock('electron', () => ({
     static fromWebContents(): null { return null }
     static getFocusedWindow(): null { return null }
   },
-  ipcMain: { handle: (name: string, fn: Handler) => mocks.ipc.set(name, fn) },
+  ipcMain: { handle: (name: string, fn: Handler) => mocks.ipc.set(name, fn), on: vi.fn() },
+  dialog: { showSaveDialog: vi.fn() },
   screen: {
     getPrimaryDisplay: () => ({ workAreaSize: { width: 1440, height: 900 } }),
     getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1440, height: 900 } }],

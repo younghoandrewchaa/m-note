@@ -34,6 +34,8 @@ beforeEach(async () => {
     readFile: vi.fn(async (path: string) => ({ path, content: "# B" })),
     saveFile: vi.fn(async () => undefined),
     setFilePath: vi.fn(async () => undefined),
+    setDirty: vi.fn(),
+    showSaveDialog: vi.fn(),
     notifySaveComplete: vi.fn(),
     getFilePath: vi.fn(),
     openExternal: vi.fn(async () => undefined),
@@ -62,7 +64,7 @@ afterEach(() => {
 
 async function openFile(path: string) {
   await act(async () => fileOpened(path))
-  await vi.waitFor(() => expect(document.title).toBe(path.split("/").pop()))
+  await vi.waitFor(() => expect(api.setDirty).toHaveBeenCalledWith(false))
 }
 
 function typeText(text: string) {
@@ -95,10 +97,34 @@ it("loads a file when file-opened fires", async () => {
   expect(host.querySelector(".ProseMirror")!.textContent).toContain("B")
 })
 
-it("marks title dirty on edit", async () => {
+it("reports unsaved changes to the main process", async () => {
   await openFile("/a/b.md")
   typeText("x")
-  expect(document.title).toBe("● b.md")
+  expect(api.setDirty).toHaveBeenCalledWith(true)
+})
+
+it("does not write the window title", async () => {
+  document.title = "Keep"
+  await openFile("/a/b.md")
+  typeText("x")
+  expect(document.title).toBe("Keep")
+})
+
+it("Cmd+S on an untitled note asks where to save", async () => {
+  api.showSaveDialog.mockResolvedValue("/d/new.md")
+  typeText("hello")
+  pressModS()
+  await vi.waitFor(() => expect(api.saveFile).toHaveBeenCalledWith("/d/new.md", expect.any(String)))
+  await vi.waitFor(() => expect(api.setFilePath).toHaveBeenCalledWith("/d/new.md"))
+  await vi.waitFor(() => expect(api.setDirty).toHaveBeenLastCalledWith(false))
+})
+
+it("cancelling Save As saves nothing", async () => {
+  api.showSaveDialog.mockResolvedValue(null)
+  typeText("hello")
+  pressModS()
+  await vi.waitFor(() => expect(api.showSaveDialog).toHaveBeenCalled())
+  expect(api.saveFile).not.toHaveBeenCalled()
 })
 
 it("Cmd+S saves markdown to the current path", async () => {
@@ -109,7 +135,7 @@ it("Cmd+S saves markdown to the current path", async () => {
   const [path, markdown] = api.saveFile.mock.calls[0]
   expect(path).toBe("/a/b.md")
   expect(markdown).toContain("edited")
-  await vi.waitFor(() => expect(document.title).toBe("b.md"))
+  await vi.waitFor(() => expect(api.setDirty).toHaveBeenLastCalledWith(false))
 })
 
 it("save-before-close writes to savePath and replies success", async () => {

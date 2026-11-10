@@ -70,7 +70,9 @@ vi.mock('electron', () => ({
     handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
       ipcHandlers[channel] = fn
     },
+    on: vi.fn(),
   },
+  dialog: { showSaveDialog: vi.fn() },
   screen: { getPrimaryDisplay: () => ({ workAreaSize: { width: 1440, height: 900 } }) },
   session: { defaultSession: { webRequest: { onHeadersReceived: vi.fn() } } },
   shell: { openExternal: vi.fn() },

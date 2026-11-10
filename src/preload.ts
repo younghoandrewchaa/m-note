@@ -43,4 +43,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setFilePath: (filePath: string): Promise<void> => {
     return ipcRenderer.invoke('set-file-path', filePath)
   },
+  setDirty: (dirty: boolean): void => {
+    ipcRenderer.send('set-dirty', dirty)
+  },
+  showSaveDialog: (): Promise<string | null> => {
+    return ipcRenderer.invoke('show-save-dialog')
+  },
 })

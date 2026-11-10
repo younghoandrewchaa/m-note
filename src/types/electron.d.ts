@@ -14,6 +14,8 @@ interface ElectronAPI {
   onSaveBeforeClose: (callback: (request: { requestId: string; savePath?: string }) => void) => () => void
   notifySaveComplete: (reply: { requestId: string; success: boolean; error?: string }) => void
   setFilePath: (filePath: string) => Promise<void>
+  setDirty: (dirty: boolean) => void
+  showSaveDialog: () => Promise<string | null>
 }
 
 interface Window {

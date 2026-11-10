@@ -81,7 +81,9 @@ vi.mock('electron', () => ({
     handle: (channel: string, fn: (event: { sender: { id: number } }, ...args: unknown[]) => unknown) => {
       ipcHandlers[channel] = fn
     },
+    on: vi.fn(),
   },
+  dialog: { showSaveDialog: vi.fn() },
   screen: {
     getPrimaryDisplay: () => ({ workAreaSize: { width: 1440, height: 900 } }),
     getAllDisplays: () => [
