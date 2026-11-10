@@ -102,6 +102,12 @@ export async function prepareWindowForClose(
     window.webContents.send('save-before-close', { requestId, savePath })
   })
 }
+function showSaveError(error: unknown) {
+  dialog.showErrorBox(
+    'Unable to save',
+    error instanceof Error ? error.message : 'Please retry saving your note.',
+  )
+}
 export function attachCloseHandler(window: BrowserWindow) {
   window.on('close', (event) => {
     if (approved.has(window)) return
@@ -115,14 +121,7 @@ export function attachCloseHandler(window: BrowserWindow) {
           window.close()
         }
       })
-      .catch((error) => {
-        dialog.showErrorBox(
-          'Unable to save',
-          error instanceof Error
-            ? error.message
-            : 'Please retry saving your note.',
-        )
-      })
+      .catch(showSaveError)
       .finally(() => pending.delete(window))
   })
 }
@@ -144,12 +143,7 @@ async function walkWindowsForQuit(
     return true
   } catch (error) {
     windows.forEach(resetWindowClose)
-    dialog.showErrorBox(
-      'Unable to save',
-      error instanceof Error
-        ? error.message
-        : 'Please retry saving your note.',
-    )
+    showSaveError(error)
     return false
   }
 }

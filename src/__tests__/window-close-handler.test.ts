@@ -185,3 +185,14 @@ it('a second quit while prompting reuses the first', async () => {
   await first
   expect(mocks.dialog.showMessageBoxSync).toHaveBeenCalledTimes(2)
 })
+it('quit walk reports a failed prepare and resets approvals', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  mocks.dialog.showMessageBoxSync.mockReturnValue(1)
+  b.webContents.executeJavaScript.mockRejectedValue(new Error('renderer gone'))
+  expect(await prepareWindowsForQuit([a, b], () => true)).toBe(false)
+  expect(mocks.dialog.showErrorBox).toHaveBeenCalledWith('Unable to save', 'renderer gone')
+  const event = { preventDefault: vi.fn() }
+  attachCloseHandler(a)
+  a.emit('close', event)
+  expect(event.preventDefault).toHaveBeenCalled()
+})
