@@ -1,59 +1,17 @@
 # M Note
 
-A markdown editor built with Electron, React, and Tiptap.
+A macOS markdown editor built with Electron, React, and Tiptap.
 
 ![M Note](m-note-screenshot.png)
 
 ## Download
 
-Download the latest release from the [GitHub Releases](https://github.com/younghoandrewchaa/m-note/releases) page.
+Download the latest macOS `.dmg` from the [GitHub Releases](https://github.com/younghoandrewchaa/m-note/releases) page.
 
-- **macOS** — download the `.dmg` file
-- **Windows** — download the `.exe` setup file
+## Features
 
-### Windows: SmartScreen warning
-
-The Windows installer is not code-signed yet, so Windows SmartScreen may show a warning on first launch. To proceed:
-
-1. Click **"More info"**
-2. Click **"Run anyway"**
-
-## Development
-
-```bash
-npm start
-```
-
-## Scripts
-
-### Release
-
-```bash
-npm run release
-# or with a custom release note:
-npm run release -- "What's new in this release"
-```
-
-Requires a clean working tree.
-
-Runs locally and triggers CI to build and publish:
-
-1. **Preflight** — checks there are no uncommitted changes
-2. **Version bump** — increments the patch number in `package.json` / `package-lock.json`
-3. **Commit & tag** — commits the version files and creates a `vX.Y.Z` git tag
-4. **Push** — pushes the commit and tag to remote, which triggers the CI workflow
-5. **CI** — builds the signed/notarized DMG and publishes the GitHub release
-
-If a release note is passed, it becomes the GitHub release body verbatim. Otherwise CI auto-generates notes from the git commit log since the previous tag.
-
-### Build DMG (local only)
-
-```bash
-npm run build:dmg
-```
-
-Builds the DMG without bumping the version or publishing. Useful for local testing.
-
+- **Rich-text Markdown editing** powered by [`@younghoandrewchaa/yeditor`](packages/yeditor/README.md) — YAML frontmatter blocks, tables, task lists, syntax-highlighted code blocks, Mermaid diagram previews, in-document search, copy markdown, copy file path, and light/dark themes.
+- **Native macOS tabs** — open `.md`/`.markdown` files from Finder, drag-and-drop, CLI arguments, or local Markdown links in native tabs (`Cmd+N` / `Cmd+T` for a new tab, `Cmd+W` to close, `Cmd+Shift+[` / `Cmd+Shift+]` to switch tabs). Already-open files focus their existing tab, untitled tabs prompt for a Save As location, unsaved tabs show a `●` prefix, and closing or quitting prompts to save dirty tabs.
 
 ## Mermaid diagrams
 
@@ -74,6 +32,48 @@ Rendering uses [Pele](https://pele.run/), whose layout differs from Mermaid.js. 
 
 ## App updates
 
-Installed macOS builds check for updates automatically when the app launches. Click **Check for Updates** in an existing instance to check again. Available updates download inside the app; choose **Restart & Install** when ready. Unsaved notes are handled before the app closes. If a check or download fails, use **Retry** or the toolbar icon. The app does not offer manual download links.
+Installed macOS builds check for updates automatically when the app launches. Click **Check for Updates** in the toolbar to check again. Available updates download inside the app; choose **Restart & Install** when ready. Unsaved notes are handled before the app closes, and open tabs (along with the active tab) are restored after restarting. If a check or download fails, use **Retry** or the toolbar icon. The app does not offer manual download links.
 
-Release with `npm run release -- "Release notes"`. The release pipeline validates the signed update ZIP and versioned architecture feed, uploads a draft, verifies the uploaded artifacts and then publishes. See [native update verification](docs/testing/native-updates.md) for the required installed-app acceptance test.
+See [native update verification](docs/testing/native-updates.md) for the required installed-app acceptance test.
+
+## Development
+
+```bash
+npm start   # Launch the Electron app with Vite HMR
+npm test    # Run all tests (app + @younghoandrewchaa/yeditor)
+npm run lint
+```
+
+The reusable React editor lives in the [`packages/yeditor`](packages/yeditor/README.md) workspace package (`@younghoandrewchaa/yeditor`).
+
+## Scripts
+
+### Release
+
+Bump the version first if needed (`npm run patch` increments the patch version in `package.json` / `package-lock.json`), then run:
+
+```bash
+npm run release
+# or with a custom release note:
+npm run release -- "What's new in this release"
+```
+
+Runs locally on macOS for the current version in `package.json`:
+
+1. **Test** — runs `npm test`
+2. **Build** — builds the signed and notarized macOS `.dmg` and update `.zip` via `electron-forge make`
+3. **Validate** — checks the update ZIP, versioned architecture manifests (`update.json`, `update-darwin-<arch>.json`, `RELEASES.json`), code signature, signing identity, and notarization assessment (`spctl`)
+4. **Tag & upload** — creates and pushes the `vX.Y.Z` tag (if not already tagged) and uploads the artifacts to a draft GitHub release
+5. **Verify & publish** — downloads the uploaded artifacts, verifies the ZIP checksum and metadata, and publishes the release
+
+### Build DMG (local only)
+
+```bash
+npm run build:dmg
+```
+
+Builds the macOS DMG without publishing. Useful for local testing.
+
+## License
+
+[MIT](LICENSE)
