@@ -122,13 +122,24 @@ describe('document windows', () => {
     expect(documents.filePathOf(window)).toBe(a)
   })
 
-  it('prefers the explicit anchor', () => {
+  it('appends a document after the last tab when an earlier tab is focused', () => {
+    const windowA = documents.open(a)
+    const windowB = documents.open(b)
+    fake(windowA).emit('focus')
+    fake(windowA).addTabbedWindow.mockClear()
+    const windowC = documents.open(c)
+    expect(fake(windowB).addTabbedWindow).toHaveBeenCalledWith(windowC)
+    expect(fake(windowA).addTabbedWindow).not.toHaveBeenCalled()
+  })
+
+  it('appends a document after the last tab even with an earlier explicit anchor', () => {
     const windowA = documents.open(a)
     const windowB = documents.open(b)
     fake(windowB).emit('focus')
-    documents.open(c, windowA)
-    expect(fake(windowA).addTabbedWindow).toHaveBeenCalled()
-    expect(fake(windowB).addTabbedWindow).not.toHaveBeenCalled()
+    fake(windowA).addTabbedWindow.mockClear()
+    const windowC = documents.open(c, windowA)
+    expect(fake(windowB).addTabbedWindow).toHaveBeenCalledWith(windowC)
+    expect(fake(windowA).addTabbedWindow).not.toHaveBeenCalled()
   })
 
   it('falls back when the last focused window has closed', () => {

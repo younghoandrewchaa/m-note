@@ -32,7 +32,10 @@ export function createDocumentWindows(makeWindow: () => BrowserWindow): Document
   }
 
   const create = (doc: Omit<TabDocument, 'id'>, explicitAnchor?: BrowserWindow | null) => {
-    const tabAnchor = explicitAnchor ?? anchor()
+    // Native tabs are inserted after the receiver. Append after the newest live
+    // tab rather than inserting beside whichever document currently has focus.
+    const tabAnchor = [...entries.values()].reverse()
+      .find((entry) => !entry.window.isDestroyed())?.window ?? explicitAnchor
     const window = makeWindow()
     const id = window.webContents.id
     const entry: Entry = { window, doc: { ...doc, id } }
