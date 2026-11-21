@@ -214,7 +214,7 @@ app.on('before-quit', (event) => {
   if (quitApproved || isInstallingUpdate()) return
   event.preventDefault()
   void prepareWindowsForQuit(BrowserWindow.getAllWindows(), documents.isDirty).then((ready) => {
-    if (!ready) return
+    if (!ready || quitApproved) return
     quitApproved = true
     app.quit()
   })

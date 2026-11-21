@@ -28,6 +28,7 @@ function windowMock() {
   }
   win.close = vi.fn()
   win.focus = vi.fn()
+  win.isFocused = vi.fn(() => false)
   win.isDestroyed = vi.fn(() => false)
   return win
 }
@@ -157,19 +158,42 @@ it('focuses each unsaved tab before its prompt', async () => {
     order.push(win === a ? 'prompt a' : 'prompt b')
     return 1
   })
+  mocks.dialog.showMessageBoxSync.mockReturnValueOnce(1)
   expect(await prepareWindowsForQuit([a, b], () => true)).toBe(true)
   expect(order).toEqual(['focus a', 'prompt a', 'focus b', 'prompt b'])
 })
-it('skips clean tabs', async () => {
+it('skips prompts for a single clean tab', async () => {
   const win = windowMock()
   win.webContents.executeJavaScript.mockResolvedValue(false)
   expect(await prepareWindowsForQuit([win], () => false)).toBe(true)
   expect(win.focus).not.toHaveBeenCalled()
   expect(mocks.dialog.showMessageBoxSync).not.toHaveBeenCalled()
 })
+it('keeps all clean tabs open when the quit confirmation is canceled', async () => {
+  const [a, b] = [windowMock(), windowMock()]
+  a.webContents.executeJavaScript.mockResolvedValue(false)
+  b.webContents.executeJavaScript.mockResolvedValue(false)
+  b.isFocused.mockReturnValue(true)
+  mocks.dialog.showMessageBoxSync.mockReturnValue(0)
+
+  expect(await prepareWindowsForQuit([a, b], () => false)).toBe(false)
+  expect(mocks.dialog.showMessageBoxSync).toHaveBeenCalledExactlyOnceWith(b, expect.objectContaining({
+    buttons: ['Cancel', 'Quit'],
+    cancelId: 0,
+    defaultId: 0,
+    message: 'Quit and close all 2 tabs?',
+  }))
+  expect(a.webContents.executeJavaScript).not.toHaveBeenCalled()
+  expect(b.webContents.executeJavaScript).not.toHaveBeenCalled()
+
+  mocks.dialog.showMessageBoxSync.mockReturnValue(1)
+  expect(await prepareWindowsForQuit([a, b], () => false)).toBe(true)
+  expect(a.webContents.executeJavaScript).toHaveBeenCalledOnce()
+  expect(b.webContents.executeJavaScript).toHaveBeenCalledOnce()
+})
 it('cancel stops the quit and keeps every tab', async () => {
   const [a, b] = [windowMock(), windowMock()]
-  mocks.dialog.showMessageBoxSync.mockReturnValueOnce(1).mockReturnValueOnce(2)
+  mocks.dialog.showMessageBoxSync.mockReturnValueOnce(1).mockReturnValueOnce(1).mockReturnValueOnce(2)
   expect(await prepareWindowsForQuit([a, b], () => true)).toBe(false)
   attachCloseHandler(a)
   const event = { preventDefault: vi.fn() }
@@ -183,7 +207,7 @@ it('a second quit while prompting reuses the first', async () => {
   const second = prepareWindowsForQuit([a, b], () => true)
   expect(second).toBe(first)
   await first
-  expect(mocks.dialog.showMessageBoxSync).toHaveBeenCalledTimes(2)
+  expect(mocks.dialog.showMessageBoxSync).toHaveBeenCalledTimes(3)
 })
 it('quit walk reports a failed prepare and resets approvals', async () => {
   const [a, b] = [windowMock(), windowMock()]

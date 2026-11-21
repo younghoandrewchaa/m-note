@@ -131,6 +131,18 @@ async function walkWindowsForQuit(
   isDirty: (window: BrowserWindow) => boolean,
 ): Promise<boolean> {
   try {
+    const liveWindows = windows.filter((window) => !window.isDestroyed())
+    if (liveWindows.length > 1) {
+      const parent = liveWindows.find((window) => window.isFocused()) ?? liveWindows[0]
+      const choice = dialog.showMessageBoxSync(parent, {
+        type: 'question',
+        buttons: ['Cancel', 'Quit'],
+        defaultId: 0,
+        cancelId: 0,
+        message: `Quit and close all ${liveWindows.length} tabs?`,
+      })
+      if (choice !== 1) return false
+    }
     for (const window of windows) {
       if (window.isDestroyed()) continue
       if (isDirty(window)) window.focus()
@@ -152,9 +164,11 @@ export function prepareWindowsForQuit(
   isDirty: (window: BrowserWindow) => boolean,
 ): Promise<boolean> {
   if (quitInFlight) return quitInFlight
-  const walk = walkWindowsForQuit(windows, isDirty).finally(() => {
-    quitInFlight = null
-  })
+  const walk = Promise.resolve()
+    .then(() => walkWindowsForQuit(windows, isDirty))
+    .finally(() => {
+      quitInFlight = null
+    })
   quitInFlight = walk
   return walk
 }
