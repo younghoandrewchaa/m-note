@@ -6,7 +6,7 @@ A macOS markdown editor built with Electron, React, and Tiptap.
 
 ## Download
 
-Download the latest macOS `.dmg` from the [GitHub Releases](https://github.com/younghoandrewchaa/m-note/releases) page.
+Download the macOS ZIP for your Mac from the [latest GitHub release](https://github.com/younghoandrewchaa/m-note/releases/latest). Unzip it and move **M Note.app** to Applications.
 
 ## Features
 
@@ -58,13 +58,11 @@ npm run release
 npm run release -- "What's new in this release"
 ```
 
-Runs locally on macOS for the current version in `package.json`:
+Releases run locally on macOS with Node.js 22 or newer. The job runs the tests and production build, then uses `electron-mac-release` to package, sign, and notarize the app. Its packaging options live in the `macRelease` block of `package.json`.
 
-1. **Test** — runs `npm test`
-2. **Build** — builds the signed and notarized macOS `.dmg` and update `.zip` via `electron-forge make`
-3. **Validate** — checks the update ZIP, versioned architecture manifests (`update.json`, `update-darwin-<arch>.json`, `RELEASES.json`), code signature, signing identity, and notarization assessment (`spctl`)
-4. **Tag & upload** — creates and pushes the `vX.Y.Z` tag (if not already tagged) and uploads the artifacts to a draft GitHub release
-5. **Verify & publish** — downloads the uploaded artifacts, verifies the ZIP checksum and metadata, and publishes the release
+Set `APPLE_KEYCHAIN_PROFILE` to use your stored `notarytool` profile. The default is `app-signing-profile`. If `APPLE_ID` is set, set `APPLE_TEAM_ID` and either `APPLE_APP_SPECIFIC_PASSWORD` or `APPLE_ID_PASSWORD` in the same environment. Set `APPLE_SIGN_IDENTITY` if you need to select a particular Developer ID certificate.
+
+The release job verifies the signed ZIP and creates a nested update feed with top-level download metadata for older M Note versions. It uploads the ZIP and feeds to a draft GitHub release, verifies the uploaded files, and publishes the release. Run `npm run package` to build an ad hoc signed bundle for local testing.
 
 ### Build DMG (local only)
 

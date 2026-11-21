@@ -7,13 +7,15 @@ import { MakerRpm } from '@electron-forge/maker-rpm'
 import { PublisherGitHub } from '@electron-forge/publisher-github'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FusesPlugin } from '@electron-forge/plugin-fuses'
-import { FuseV1Options, FuseVersion } from '@electron/fuses'
+import { electronFuses } from './scripts/electron-fuses.mjs'
+import packageJson from './package.json'
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
-    appBundleId: 'com.electron.m-note',
-    icon: './resources/icon',
+    asar: packageJson.macRelease.packager.asar,
+    appBundleId: packageJson.macRelease.packager.appBundleId,
+    icon: packageJson.macRelease.packager.icon,
+    extendInfo: packageJson.macRelease.packager.extendInfo,
     osxSign: {
       ignore: (file: string) => /\/[^/]+\.lproj\/locale\.pak$/.test(file),
     },
@@ -24,18 +26,8 @@ const config: ForgeConfig = {
           teamId: process.env.APPLE_TEAM_ID!,
         }
       : {
-          keychainProfile: 'm-note',
+          keychainProfile: process.env.APPLE_KEYCHAIN_PROFILE || 'm-note',
         },
-    extendInfo: {
-      CFBundleDocumentTypes: [
-        {
-          CFBundleTypeName: 'Markdown Document',
-          CFBundleTypeRole: 'Editor',
-          LSHandlerRank: 'Default',
-          CFBundleTypeExtensions: ['md', 'markdown'],
-        },
-      ],
-    },
   },
   rebuildConfig: {},
   makers: [
@@ -84,15 +76,7 @@ const config: ForgeConfig = {
     }),
     // Fuses are used to enable/disable various Electron functionality
     // at package time, before code signing the application
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
+    new FusesPlugin(electronFuses),
   ],
 }
 

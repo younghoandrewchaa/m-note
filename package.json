@@ -7,6 +7,8 @@
   "private": true,
   "scripts": {
     "start": "electron-forge start",
+    "build": "node scripts/build-release.mjs",
+    "package": "npm run build && node scripts/package-release-app.mjs",
     "lint": "eslint --ext .ts,.tsx .",
     "icon": "sh scripts/generate-icon.sh",
     "build:dmg": "sh scripts/build-dmg.sh",
@@ -43,6 +45,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "42.11.16",
+    "electron-mac-release": "1.0.1",
     "encoding": "^0.1.13",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.10.1",
@@ -59,6 +62,25 @@
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
+  },
+  "macRelease": {
+    "include": [".vite"],
+    "packager": {
+      "appBundleId": "com.electron.m-note",
+      "asar": true,
+      "icon": "./resources/icon",
+      "prune": false,
+      "extendInfo": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Markdown Document",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Default",
+            "CFBundleTypeExtensions": ["md", "markdown"]
+          }
+        ]
+      }
+    }
   },
   "allowScripts": {
     "macos-alias@0.2.12": true,

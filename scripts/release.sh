@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION=$(node -p "require('./package.json').version")
 ARCH=$(node -p 'process.arch')
+APP_NAME=$(node -p "require('./package.json').productName")
 TAG="v${VERSION}"
 RELEASE_NOTE="${1:-}"
 if gh release view "$TAG" --json isDraft -q '.isDraft' > /dev/null 2>&1; then
@@ -15,17 +16,13 @@ fi
 npm test
 if [ -z "$RELEASE_NOTE" ]; then read -rp 'Release statement: ' RELEASE_NOTE; fi
 if [ ! -f resources/icon.icns ]; then sh scripts/generate-icon.sh; fi
-# Never let a stale artifact from a prior make satisfy this release.
-rm -rf out/
-npx electron-forge make
-ZIP_PATH=$(find out/make/zip -name "*-darwin-${ARCH}-${VERSION}.zip" -print -quit)
-MANIFEST="$(dirname "$ZIP_PATH")/RELEASES.json"
-DMG_PATH=$(find out/make -name "*${VERSION}*.dmg" -print -quit)
-[ -n "$ZIP_PATH" ] && [ -f "$MANIFEST" ] && [ -n "$DMG_PATH" ]
-ZIP_PATH=$(node scripts/fix-mac-update-manifest.mjs "$MANIFEST" "$ZIP_PATH")
+npm run package -- --sign
 STAGING=$(mktemp -d)
 trap 'rm -rf "$STAGING"' EXIT
-cp "$ZIP_PATH" "$DMG_PATH" "$MANIFEST" "$(dirname "$MANIFEST")/update.json" "$(dirname "$MANIFEST")/update-darwin-${ARCH}.json" "$STAGING/"
+PACKAGED_APP="out/${APP_NAME}-darwin-${ARCH}/${APP_NAME}.app"
+ZIP_PATH="$STAGING/${APP_NAME// /.}-darwin-${ARCH}-${VERSION}.zip"
+ditto -c -k --sequesterRsrc --keepParent "$PACKAGED_APP" "$ZIP_PATH"
+node scripts/fix-mac-update-manifest.mjs "$ZIP_PATH" "$VERSION" "$RELEASE_NOTE"
 node scripts/validate-update-release.mjs "$STAGING" "$VERSION" "$ARCH"
 # Verify the actual ZIP payload, not just the surrounding metadata.
 ditto -x -k "$ZIP_PATH" "$STAGING/unpacked"
@@ -37,6 +34,7 @@ MACH_ARCH="$ARCH"
 if [ "$ARCH" = x64 ]; then MACH_ARCH=x86_64; fi
 lipo "$APP_PATH/Contents/MacOS/$EXECUTABLE" -verify_arch "$MACH_ARCH"
 codesign --verify --deep --strict "$APP_PATH"
+xcrun stapler validate "$APP_PATH"
 TEAM=$(codesign -dv "$APP_PATH" 2>&1 | sed -n 's/^TeamIdentifier=//p')
 BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP_PATH/Contents/Info.plist")
 node scripts/validate-update-release.mjs "$STAGING" "$VERSION" "$ARCH" "$TEAM" "$BUNDLE_ID"
@@ -46,7 +44,7 @@ git push origin "$TAG"
 if ! gh release view "$TAG" >/dev/null 2>&1; then
   gh release create "$TAG" --draft --title "$TAG" --notes "$RELEASE_NOTE"
 fi
-gh release upload "$TAG" "$STAGING"/*.zip "$STAGING"/*.dmg "$STAGING"/*.json --clobber
+gh release upload "$TAG" "$ZIP_PATH" "$STAGING"/*.json --clobber
 mkdir "$STAGING/downloaded"
 gh release download "$TAG" --dir "$STAGING/downloaded"
 node scripts/validate-update-release.mjs "$STAGING/downloaded" "$VERSION" "$ARCH"

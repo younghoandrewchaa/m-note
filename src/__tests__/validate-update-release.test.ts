@@ -1,6 +1,12 @@
 import { expect, it } from 'vitest'
 import { validateUpdateRelease } from '../../scripts/validate-update-release.mjs'
 const zip = 'M.Note-darwin-arm64-2.0.0.zip'
+const update = {
+  url: `https://github.com/younghoandrewchaa/m-note/releases/download/v2.0.0/${zip}`,
+  name: 'M Note v2.0.0',
+  notes: '',
+  pub_date: '2026-10-18T00:00:00Z',
+}
 const input = {
   version: '2.0.0',
   arch: 'arm64',
@@ -9,16 +15,14 @@ const input = {
     'update-darwin-arm64.json',
     'update.json',
     'RELEASES.json',
-    'M.Note.dmg',
   ],
   feed: {
-    url: `https://github.com/younghoandrewchaa/m-note/releases/download/v2.0.0/${zip}`,
-    name: 'M Note v2.0.0',
-    notes: '',
-    pub_date: '2026-10-18T00:00:00Z',
+    currentRelease: '2.0.0',
+    releases: [{ version: '2.0.0', updateTo: update }],
+    ...update,
   },
 }
-it('accepts a complete pinned update', () =>
+it('accepts a complete pinned ZIP-only update', () =>
   expect(() => validateUpdateRelease(input)).not.toThrow())
 it('rejects missing zip', () =>
   expect(() =>
@@ -39,6 +43,16 @@ it('rejects a moving feed URL', () =>
 it('rejects missing required metadata', () =>
   expect(() =>
     validateUpdateRelease({ ...input, feed: { url: input.feed.url } }),
+  ).toThrow())
+it('rejects a nested feed that disagrees with the legacy download metadata', () =>
+  expect(() =>
+    validateUpdateRelease({
+      ...input,
+      feed: {
+        ...input.feed,
+        releases: [{ version: '2.0.0', updateTo: { ...update, url: update.url + '.wrong' } }],
+      },
+    }),
   ).toThrow())
 
 import { validateSigningIdentity } from '../../scripts/validate-update-release.mjs'

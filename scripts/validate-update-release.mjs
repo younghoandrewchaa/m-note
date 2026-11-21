@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { toSquirrelMacFeed } from './fix-mac-update-manifest.mjs'
 // Preserve the identity of the existing signed M Note installation.
 export function validateSigningIdentity(team, bundleId) {
   if (team !== 'G569HDEERH' || bundleId !== 'com.electron.m-note') {
@@ -20,8 +21,7 @@ export function validateUpdateRelease({ version, arch, assets, feed }) {
   ]) {
     if (!assets.includes(name)) throw new Error(`Missing ${name}`)
   }
-  if (!zip || !assets.some((name) => name.endsWith('.dmg')))
-    throw new Error('Missing release binary')
+  if (!zip) throw new Error('Missing release ZIP')
   if (
     feed.url !==
     `https://github.com/younghoandrewchaa/m-note/releases/download/v${version}/${zip}`
@@ -34,6 +34,11 @@ export function validateUpdateRelease({ version, arch, assets, feed }) {
     !Number.isFinite(Date.parse(feed.pub_date))
   )
     throw new Error('Invalid update metadata')
+  if (feed.currentRelease !== version || !Array.isArray(feed.releases))
+    throw new Error('Nested feed does not identify this release')
+  const nested = toSquirrelMacFeed(feed)
+  if (Object.keys(nested).some((key) => nested[key] !== feed[key]))
+    throw new Error('Nested and legacy update metadata disagree')
 }
 if (
   process.argv[1] &&

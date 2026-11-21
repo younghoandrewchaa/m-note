@@ -1,32 +1,13 @@
 #!/usr/bin/env node
 //
-// Normalize a Squirrel.Mac `RELEASES.json` so its update URL matches the zip
-// asset name that GitHub will actually serve, and derive the flat feed JSON
-// Squirrel.Mac's client actually reads at the feed URL.
-//
-// @electron-forge/maker-zip names the mac update zip after the packaged app
-// directory, e.g. "M Note-darwin-arm64-1.1.15.zip" (note the space), and writes
-// the manifest `updateTo.url` as ".../download/M%20Note-...zip". When the zip is
-// uploaded as a GitHub release asset, GitHub replaces spaces with dots, so the
-// served asset is "M.Note-darwin-arm64-1.1.15.zip". The manifest URL then 404s
-// and native auto-update silently fails. This rewrites both sides to the same
-// dot-normalized name.
-//
-// Separately, maker-zip's RELEASES.json is a Squirrel.Windows-style manifest
-// ({ currentRelease, releases: [...] }), but Squirrel.Mac's JSON server type
-// expects a flat { url, name, notes, pub_date } object at the feed URL (see the
-// Squirrel.Mac README linked from Electron's FeedURLOptions docs). Pointing the
-// feed straight at RELEASES.json means Squirrel.Mac can never parse an update
-// out of it. This also writes that flattened object to update.json alongside
-// RELEASES.json, which is what auto-updater.ts's feed URL actually targets.
-//
-// Usage (from release.sh):
-//   node scripts/fix-mac-update-manifest.mjs <RELEASES.json> <zip path>
-// Renames the zip on disk, rewrites the manifest in place, writes
-// update.json next to it, and prints the normalized zip path to stdout.
+// Keep top-level metadata in the nested feed for older M Note clients.
+// Use a dot-normalized ZIP name to match the URL GitHub serves.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { buildManifest } from 'electron-mac-release/lib/manifest.mjs';
+import { loadConfig } from 'electron-mac-release/lib/config.mjs';
 
 /** GitHub replaces spaces in release asset filenames with dots. Mirror that. */
 export function normalizeZipName(name) {
@@ -58,8 +39,7 @@ export function normalizeManifest(manifest, normalizedZipName) {
 }
 
 /**
- * Flatten a manifest's currentRelease entry into the { url, name, notes,
- * pub_date } shape Squirrel.Mac's JSON server type expects at the feed URL.
+ * Read the current release's download metadata for older M Note clients.
  */
 export function toSquirrelMacFeed(manifest) {
   const release = (manifest.releases ?? []).find(
@@ -76,37 +56,33 @@ export function toSquirrelMacFeed(manifest) {
 }
 
 function main(argv) {
-  const [manifestPath, zipPath] = argv;
-  if (!manifestPath || !zipPath) {
-    console.error(
-      'Usage: fix-mac-update-manifest.mjs <RELEASES.json> <zip path>',
-    );
-    process.exit(1);
-  }
+  const [zipPath, version, notes] = argv;
+  if (!zipPath || !version || notes === undefined)
+    throw new Error('Usage: fix-mac-update-manifest.mjs <zip path> <version> <notes>');
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-  const normalizedName = normalizeZipName(path.basename(zipPath));
+  const zipName = path.basename(zipPath);
+  const match = zipName.match(/-darwin-(arm64|x64)-([0-9.]+)\.zip$/);
+  if (!match || match[2] !== version || zipName !== normalizeZipName(zipName))
+    throw new Error('ZIP name does not match the release version and architecture');
 
-  const normalized = normalizeManifest(manifest, normalizedName);
-  fs.writeFileSync(manifestPath, JSON.stringify(normalized));
-
-  const feedPath = path.join(path.dirname(manifestPath), 'update.json');
-  const feed = toSquirrelMacFeed(normalized);
-  fs.writeFileSync(feedPath, JSON.stringify(feed));
-  const match = normalizedName.match(/-darwin-(arm64|x64)-([0-9.]+)\.zip$/);
-  if (!match || match[2] !== manifest.currentRelease) throw new Error('ZIP version or architecture does not match the manifest');
-  fs.writeFileSync(path.join(path.dirname(manifestPath), `update-darwin-${match[1]}.json`), JSON.stringify(feed));
-
-  const normalizedZipPath = path.join(path.dirname(zipPath), normalizedName);
-  if (normalizedZipPath !== zipPath) {
-    fs.renameSync(zipPath, normalizedZipPath);
-  }
-
-  // Emit the final zip path so the caller can upload it.
-  process.stdout.write(normalizedZipPath);
+  const manifest = buildManifest({
+    name: loadConfig().name,
+    version,
+    repository: 'younghoandrewchaa/m-note',
+    zipName,
+    notes,
+  });
+  const directory = path.dirname(zipPath);
+  fs.writeFileSync(path.join(directory, 'RELEASES.json'), JSON.stringify(manifest));
+  const metadata = toSquirrelMacFeed(manifest);
+  fs.writeFileSync(path.join(directory, 'update.json'), JSON.stringify(metadata));
+  fs.writeFileSync(
+    path.join(directory, `update-darwin-${match[1]}.json`),
+    JSON.stringify({ ...manifest, ...metadata }),
+  );
 }
 
 // Run only when invoked as a script, not when imported by tests.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2));
 }

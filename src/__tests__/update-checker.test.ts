@@ -19,16 +19,22 @@ afterEach(() => {
   Object.defineProperty(process, 'platform', originalPlatform)
 })
 function feed(version = '2.0.0', overrides: Record<string, unknown> = {}) {
+  respondWith(updateMetadata(version, overrides))
+}
+function updateMetadata(version: string, overrides: Record<string, unknown> = {}) {
+  return {
+    url: zipUrl(version),
+    name: `M Note v${version}`,
+    notes: '',
+    pub_date: '2026-10-18T00:00:00Z',
+    ...overrides,
+  }
+}
+function respondWith(data: unknown) {
   fetch.mockResolvedValue({
     ok: true,
     status: 200,
-    json: async () => ({
-      url: zipUrl(version),
-      name: `M Note v${version}`,
-      notes: '',
-      pub_date: '2026-10-18T00:00:00Z',
-      ...overrides,
-    }),
+    json: async () => data,
   })
 }
 it('does not depend on the rate-limited GitHub REST API', async () => {
@@ -62,6 +68,37 @@ it('pins the native feed to the release version', async () => {
     feedUrl: `${base}/download/v2.0.0/${feedName}`,
   })
   expect(fetch).toHaveBeenCalledTimes(1)
+})
+it('selects the current release from the nested feed', async () => {
+  respondWith({
+    currentRelease: '2.0.0',
+    releases: [
+      { version: '1.0.0', updateTo: updateMetadata('1.0.0') },
+      { version: '2.0.0', updateTo: updateMetadata('2.0.0') },
+    ],
+  })
+
+  await expect(checkForUpdate()).resolves.toEqual({
+    version: '2.0.0',
+    feedUrl: `${base}/download/v2.0.0/${feedName}`,
+  })
+})
+it('rejects conflicting nested metadata even when legacy fields are valid', async () => {
+  respondWith({
+    ...updateMetadata('2.0.0'),
+    currentRelease: '2.0.0',
+    releases: [{ version: '2.0.0', updateTo: updateMetadata('3.0.0') }],
+  })
+
+  await expect(checkForUpdate()).rejects.toThrow('metadata')
+})
+it('rejects a nested feed with no matching release', async () => {
+  respondWith({
+    currentRelease: '2.0.0',
+    releases: [{ version: '3.0.0', updateTo: updateMetadata('3.0.0') }],
+  })
+
+  await expect(checkForUpdate()).rejects.toThrow('metadata')
 })
 it('treats a missing feed as not yet available', async () => {
   fetch.mockResolvedValue({ ok: false, status: 404 })

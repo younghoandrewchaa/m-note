@@ -9,6 +9,23 @@ function versionParts(version: string): number[] {
     throw new Error('Invalid update version.')
   return version.split('.').map(Number)
 }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+function selectUpdate(manifest: unknown) {
+  if (!isRecord(manifest)) return
+  if (!('currentRelease' in manifest || 'releases' in manifest))
+    return { metadata: manifest }
+
+  const { currentRelease, releases } = manifest
+  if (typeof currentRelease !== 'string' || !Array.isArray(releases)) return
+  const release = releases.find(
+    (entry: unknown): entry is Record<string, unknown> =>
+      isRecord(entry) && entry.version === currentRelease,
+  )
+  if (isRecord(release?.updateTo))
+    return { version: currentRelease, metadata: release.updateTo }
+}
 // Read the feed via the latest-release download redirect rather than the
 // GitHub REST API, whose unauthenticated limit (60/hour per IP) is easily
 // exhausted on shared networks and surfaces as a 403.
@@ -27,27 +44,26 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     throw new Error(
       `Unable to check for updates (${response.status}). Please retry.`,
     )
-  const metadata = (await response.json()) as {
-    url?: string
-    name?: string
-    notes?: string
-    pub_date?: string
-  }
+  const update = selectUpdate(await response.json())
+  const metadata = update?.metadata
   const match =
-    typeof metadata.url === 'string'
+    typeof metadata?.url === 'string'
       ? metadata.url.match(
           /^https:\/\/github\.com\/younghoandrewchaa\/m-note\/releases\/download\/v(\d+\.\d+\.\d+)\/[^/]+-darwin-([a-z0-9]+)-(\d+\.\d+\.\d+)\.zip$/,
         )
       : null
   const version = match?.[1]
   if (
+    !metadata ||
     !match ||
+    (update?.version !== undefined && update.version !== version) ||
     match[2] !== process.arch ||
     match[3] !== version ||
     typeof metadata.name !== 'string' ||
     !metadata.name.includes(version) ||
     typeof metadata.notes !== 'string' ||
-    !Number.isFinite(Date.parse(metadata.pub_date ?? ''))
+    typeof metadata.pub_date !== 'string' ||
+    !Number.isFinite(Date.parse(metadata.pub_date))
   ) {
     throw new Error('Invalid update metadata. Please retry later.')
   }
