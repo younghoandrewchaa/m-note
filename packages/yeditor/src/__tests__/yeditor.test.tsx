@@ -66,10 +66,10 @@ function mockClipboard() {
   return { writeText, write }
 }
 
-async function openHtmlMenu() {
-  const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Copy as HTML"]')
+async function openCopyMenu() {
+  const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Copy as…"]')
   expect(trigger).not.toBeNull()
-  if (!trigger) throw new Error("Copy as HTML toolbar button is missing")
+  if (!trigger) throw new Error("Copy as… toolbar button is missing")
   await act(async () => {
     trigger.dispatchEvent(new KeyboardEvent("keydown", {
       key: "ArrowDown", bubbles: true, cancelable: true,
@@ -78,7 +78,7 @@ async function openHtmlMenu() {
   return trigger
 }
 
-async function selectHtmlAction(label: string) {
+async function selectCopyAction(label: string) {
   const item = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'))
     .find((element) => element.textContent === label)
   expect(item).toBeDefined()
@@ -86,28 +86,45 @@ async function selectHtmlAction(label: string) {
   await act(async () => item.click())
 }
 
-it("copies the entire note as escaped HTML source beside the Markdown action", async () => {
+it("offers all three formats in one menu and copies the entire note as Markdown", async () => {
+  const clipboard = mockClipboard()
+  const ref = await renderEditor({ initialValue: "# Title\n\nHello **world**" })
+  await act(async () => ref.current.editor!.commands.setTextSelection({ from: 1, to: 3 }))
+
+  const trigger = await openCopyMenu()
+  expect(host.querySelector('[aria-label="Copy as Markdown"], [aria-label="Copy as HTML"]')).toBeNull()
+  expect(Array.from(document.querySelectorAll('[role="menuitem"]'), (item) => item.textContent))
+    .toEqual(["Copy as Markdown", "Copy HTML source", "Copy formatted content"])
+  expect(clipboard.writeText).not.toHaveBeenCalled()
+
+  await selectCopyAction("Copy as Markdown")
+  expect(clipboard.writeText).toHaveBeenCalledWith("# Title\n\nHello **world**")
+  expect(clipboard.write).not.toHaveBeenCalled()
+  expect(document.querySelector('[role="menu"]')).toBeNull()
+  expect(trigger.getAttribute("aria-label")).toBe("Copied")
+})
+
+it("copies the entire note as escaped HTML source", async () => {
   const clipboard = mockClipboard()
   const ref = await renderEditor({ initialValue: '# Title\n\nHello **world**\n\n```html\n<b>literal</b>\n```\n\nEnd' })
   const editor = ref.current.editor
   if (!editor) throw new Error("Editor is missing")
   act(() => editor.commands.setTextSelection({ from: 1, to: 3 }))
-  const trigger = await openHtmlMenu()
-  expect(trigger.previousElementSibling?.getAttribute("aria-label")).toBe("Copy as Markdown")
-  await selectHtmlAction("Copy HTML source")
+  const trigger = await openCopyMenu()
+  await selectCopyAction("Copy HTML source")
   expect(clipboard.writeText).toHaveBeenCalledWith(
     '<h1>Title</h1><p>Hello <strong>world</strong></p><pre><code class="language-html">&lt;b&gt;literal&lt;/b&gt;</code></pre><p>End</p>',
   )
   expect(clipboard.write).not.toHaveBeenCalled()
   expect(document.querySelector('[role="menu"]')).toBeNull()
-  expect(trigger.getAttribute("aria-label")).toBe("Copied as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copied")
 })
 
 it("copies formatted HTML with readable plain text as one clipboard item", async () => {
   const clipboard = mockClipboard()
   await renderEditor({ initialValue: '# Title\n\nHello **world**' })
-  await openHtmlMenu()
-  await selectHtmlAction("Copy formatted content")
+  await openCopyMenu()
+  await selectCopyAction("Copy formatted content")
   const items = clipboard.write.mock.calls[0][0]
   expect(items).toHaveLength(1)
   expect(await items[0].data["text/html"].text()).toBe('<h1>Title</h1><p>Hello <strong>world</strong></p>')
@@ -118,8 +135,8 @@ it("copies formatted HTML with readable plain text as one clipboard item", async
 it.each(["Copy HTML source", "Copy formatted content"])("exports special content without editor UI through %s", async (label) => {
   const clipboard = mockClipboard()
   await renderEditor({ initialValue: '---\ntitle: Post\n---\n\n```mermaid\ngraph TD; A-->B\n```\n\n- [Link](https://example.com)\n\n| Name |\n| --- |\n| Alice |\n\n![Photo](images/photo.png)' })
-  await openHtmlMenu()
-  await selectHtmlAction(label)
+  await openCopyMenu()
+  await selectCopyAction(label)
   const html = label === "Copy HTML source"
     ? clipboard.writeText.mock.calls[0][0]
     : await clipboard.write.mock.calls[0][0][0].data["text/html"].text()
@@ -138,34 +155,34 @@ it.each(["Copy HTML source", "Copy formatted content"])("exports special content
 it("copies an empty note as an HTML fragment", async () => {
   const clipboard = mockClipboard()
   await renderEditor()
-  await openHtmlMenu()
-  await selectHtmlAction("Copy HTML source")
+  await openCopyMenu()
+  await selectCopyAction("Copy HTML source")
   expect(clipboard.writeText).toHaveBeenCalledWith("<p></p>")
 })
 
-it.each(["Copy HTML source", "Copy formatted content"])("shows failure and permits retry for %s", async (label) => {
+it.each(["Copy as Markdown", "Copy HTML source", "Copy formatted content"])("shows failure and permits retry for %s", async (label) => {
   const clipboard = mockClipboard()
-  const write = label === "Copy HTML source" ? clipboard.writeText : clipboard.write
+  const write = label === "Copy formatted content" ? clipboard.write : clipboard.writeText
   write.mockRejectedValueOnce(new Error("Permission denied"))
   await renderEditor({ initialValue: "Hello" })
-  const trigger = await openHtmlMenu()
-  await selectHtmlAction(label)
+  const trigger = await openCopyMenu()
+  await selectCopyAction(label)
   expect(document.querySelector('[role="alert"]')?.textContent).toContain("Could not copy")
   expect(document.querySelector('[role="menu"]')).not.toBeNull()
-  expect(trigger.getAttribute("aria-label")).toBe("Copy as HTML")
-  await selectHtmlAction(label)
+  expect(trigger.getAttribute("aria-label")).toBe("Copy as…")
+  await selectCopyAction(label)
   expect(document.querySelector('[role="alert"]')).toBeNull()
-  expect(trigger.getAttribute("aria-label")).toBe("Copied as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copied")
 })
 
 it("reports unavailable rich clipboard support without silently copying another format", async () => {
   const clipboard = mockClipboard()
   vi.stubGlobal("ClipboardItem", undefined)
   await renderEditor({ initialValue: "Hello" })
-  const trigger = await openHtmlMenu()
-  await selectHtmlAction("Copy formatted content")
+  const trigger = await openCopyMenu()
+  await selectCopyAction("Copy formatted content")
   expect(document.querySelector('[role="alert"]')?.textContent).toContain("Could not copy")
-  expect(trigger.getAttribute("aria-label")).toBe("Copy as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copy as…")
   expect(clipboard.writeText).not.toHaveBeenCalled()
 })
 
@@ -174,17 +191,17 @@ it("waits for clipboard success, prevents duplicate writes, and returns keyboard
   let finish!: () => void
   clipboard.writeText.mockReturnValueOnce(new Promise<void>((resolve) => { finish = resolve }))
   await renderEditor({ initialValue: "Hello" })
-  const trigger = await openHtmlMenu()
-  await selectHtmlAction("Copy HTML source")
+  const trigger = await openCopyMenu()
+  await selectCopyAction("Copy HTML source")
   expect(document.querySelector('[role="menu"]')).not.toBeNull()
-  expect(trigger.getAttribute("aria-label")).toBe("Copy as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copy as…")
   expect(Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
     .every((item) => item.disabled)).toBe(true)
-  await selectHtmlAction("Copy HTML source")
+  await selectCopyAction("Copy HTML source")
   expect(clipboard.writeText).toHaveBeenCalledTimes(1)
   await act(async () => finish())
   expect(document.querySelector('[role="menu"]')).toBeNull()
-  expect(trigger.getAttribute("aria-label")).toBe("Copied as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copied")
   // Radix restores focus on the next task after unmounting its focus scope.
   await act(async () => vi.waitFor(() => expect(document.activeElement).toBe(trigger)))
 })
@@ -192,17 +209,17 @@ it("waits for clipboard success, prevents duplicate writes, and returns keyboard
 it("clears the success check after two seconds", async () => {
   mockClipboard()
   await renderEditor({ initialValue: "Hello" })
-  const trigger = await openHtmlMenu()
+  const trigger = await openCopyMenu()
   vi.useFakeTimers()
-  await selectHtmlAction("Copy HTML source")
-  expect(trigger.getAttribute("aria-label")).toBe("Copied as HTML")
+  await selectCopyAction("Copy HTML source")
+  expect(trigger.getAttribute("aria-label")).toBe("Copied")
   await act(async () => vi.advanceTimersByTimeAsync(2000))
-  expect(trigger.getAttribute("aria-label")).toBe("Copy as HTML")
+  expect(trigger.getAttribute("aria-label")).toBe("Copy as…")
 })
 
 it("keeps focus on an outside control when it dismisses the menu", async () => {
   await renderEditor({ initialValue: "Hello", toolbarEnd: <button>Other action</button> })
-  await openHtmlMenu()
+  await openCopyMenu()
   const outside = Array.from(host.querySelectorAll("button"))
     .find((button) => button.textContent === "Other action")
   if (!outside) throw new Error("Outside control is missing")

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useCurrentEditor } from "@tiptap/react"
 import { CheckIcon } from "../../tiptap-icons/check-icon"
-import { Code2Icon } from "../../tiptap-icons/code2-icon"
+import { ClipboardCopyIcon } from "../../tiptap-icons/clipboard-copy-icon"
 import { ChevronDownIcon } from "../../tiptap-icons/chevron-down-icon"
 import { Button } from "../../tiptap-ui-primitive/button"
 import {
@@ -13,9 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../tiptap-ui-primitive/dropdown-menu"
-import "./copy-html-dropdown-menu.scss"
+import "./copy-dropdown-menu.scss"
 
-export function CopyHtmlDropdownMenu() {
+const copyOptions = [
+  ["markdown", "Copy as Markdown"],
+  ["source", "Copy HTML source"],
+  ["formatted", "Copy formatted content"],
+] as const
+
+type CopyFormat = (typeof copyOptions)[number][0]
+
+export function CopyDropdownMenu() {
   const { editor } = useCurrentEditor()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -33,7 +41,7 @@ export function CopyHtmlDropdownMenu() {
     }
   }, [])
 
-  async function copy(format: "source" | "formatted") {
+  async function copy(format: CopyFormat) {
     if (!editor || copying.current) return
     copying.current = true
     setPending(true)
@@ -43,16 +51,16 @@ export function CopyHtmlDropdownMenu() {
 
     try {
       // Serialize the document, excluding node-view controls and previews.
-      const html = editor.getHTML()
-      if (format === "source") {
-        await navigator.clipboard.writeText(html)
-      } else {
+      if (format === "formatted") {
         await navigator.clipboard.write([
           new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
+            "text/html": new Blob([editor.getHTML()], { type: "text/html" }),
             "text/plain": new Blob([editor.getText()], { type: "text/plain" }),
           }),
         ])
+      } else {
+        const text = format === "markdown" ? editor.getMarkdown() : editor.getHTML()
+        await navigator.clipboard.writeText(text)
       }
 
       if (!mounted.current) return
@@ -83,28 +91,25 @@ export function CopyHtmlDropdownMenu() {
           type="button"
           variant="ghost"
           tabIndex={-1}
-          aria-label={copied ? "Copied as HTML" : "Copy as HTML"}
-          tooltip={copied ? "Copied as HTML" : "Copy as HTML"}
+          aria-label={copied ? "Copied" : "Copy as…"}
+          tooltip={copied ? "Copied" : "Copy as…"}
         >
           {copied ? (
             <CheckIcon className="tiptap-button-icon" />
           ) : (
-            <Code2Icon className="tiptap-button-icon" />
+            <ClipboardCopyIcon className="tiptap-button-icon" />
           )}
           <ChevronDownIcon className="tiptap-button-dropdown-small" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        aria-label="Copy as HTML"
+        aria-label="Copy as…"
         // Use Radix's focus restoration, including its outside-interaction guard.
         onCloseAutoFocus={undefined}
       >
         <DropdownMenuGroup>
-          {([
-            ["source", "Copy HTML source"],
-            ["formatted", "Copy formatted content"],
-          ] as const).map(([format, label]) => (
+          {copyOptions.map(([format, label]) => (
             <DropdownMenuItem
               key={format}
               asChild
@@ -122,7 +127,7 @@ export function CopyHtmlDropdownMenu() {
           ))}
         </DropdownMenuGroup>
         {error && (
-          <p role="alert" className="copy-html-error">
+          <p role="alert" className="copy-menu-error">
             Could not copy. Please try again.
           </p>
         )}

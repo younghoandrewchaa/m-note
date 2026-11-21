@@ -24,7 +24,7 @@ flowchart LR
 ```
 ````
 
-The source stays editable with a live diagram below it. Previews update after a short typing pause, match the light/dark theme, and work offline. Saving and **Copy Markdown** keep the original Mermaid source, not the generated SVG.
+The source stays editable with a live diagram below it. Previews update after a short typing pause, match the light/dark theme, and work offline. Saving or choosing **Copy as… → Copy as Markdown** preserves the original Mermaid source.
 
 Invalid or oversized diagrams show an error without discarding source. If an earlier valid preview remains visible, it is marked as stale. Diagram links and external images are disabled.
 

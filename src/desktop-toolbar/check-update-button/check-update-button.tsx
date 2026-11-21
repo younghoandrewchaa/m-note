@@ -5,7 +5,6 @@ import { forwardRef, useCallback } from "react"
 import type { ButtonProps } from "@younghoandrewchaa/yeditor"
 import { Button } from "@younghoandrewchaa/yeditor"
 import { RefreshCwIcon } from "@/icons/refresh-cw-icon"
-import { CheckIcon } from "@younghoandrewchaa/yeditor"
 
 export interface CheckUpdateButtonProps extends ButtonProps {
   updateStatus?: import("@/update-state").UpdateState["status"]
@@ -23,7 +22,6 @@ export const CheckUpdateButton = forwardRef<
     const checking = ["checking", "downloading", "installing"].includes(
       updateStatus ?? "",
     )
-    const checked = updateStatus === "up-to-date" || updateStatus === "ready"
 
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -48,14 +46,11 @@ export const CheckUpdateButton = forwardRef<
         {...buttonProps}
         ref={ref}
       >
-        {children ??
-          (checked ? (
-            <CheckIcon className="tiptap-button-icon" />
-          ) : (
-            <RefreshCwIcon
-              className={`tiptap-button-icon${checking ? " tiptap-button-icon-spin" : ""}`}
-            />
-          ))}
+        {children ?? (
+          <RefreshCwIcon
+            className={`tiptap-button-icon${checking ? " tiptap-button-icon-spin" : ""}`}
+          />
+        )}
       </Button>
     )
   },
