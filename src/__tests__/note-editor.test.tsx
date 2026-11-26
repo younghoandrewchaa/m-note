@@ -3,6 +3,7 @@ import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { NoteEditor, openNoteLink } from "../note-editor"
+import { saveScrollPosition, takeScrollPosition } from "../scroll-restore"
 
 type Listener<T> = (value: T) => void
 let host: HTMLDivElement
@@ -12,6 +13,7 @@ let saveBeforeClose: Listener<{ requestId: string; savePath?: string }>
 let api: Record<string, ReturnType<typeof vi.fn>>
 
 beforeEach(async () => {
+  sessionStorage.clear()
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
   vi.stubGlobal("__APP_VERSION__", "9.9.9")
   vi.stubGlobal(
@@ -190,4 +192,32 @@ it("opens local markdown links via openLocalFile and others via openExternal", (
   api.openExternal.mockClear()
   openNoteLink("javascript:alert(1)", "/a/b.md")
   expect(api.openExternal).not.toHaveBeenCalled()
+})
+
+const scroller = () => host.querySelector(".yeditor") as HTMLElement
+
+it("saves the scroll position of the open file before unload", async () => {
+  await openFile("/notes/a.md")
+  scroller().scrollTop = 300
+  window.dispatchEvent(new Event("beforeunload"))
+  expect(takeScrollPosition("/notes/a.md")).toBe(300)
+})
+
+it("does not save a position for an untitled tab", () => {
+  scroller().scrollTop = 300
+  window.dispatchEvent(new Event("beforeunload"))
+  expect(sessionStorage.getItem("m-note:scroll-position")).toBeNull()
+})
+
+it("restores the saved scroll position when the same file is reopened after reload", async () => {
+  saveScrollPosition("/notes/a.md", 300)
+  await openFile("/notes/a.md")
+  await vi.waitFor(() => expect(scroller().scrollTop).toBe(300))
+})
+
+it("does not restore a position saved for another file", async () => {
+  saveScrollPosition("/notes/a.md", 300)
+  await openFile("/notes/b.md")
+  await new Promise((r) => requestAnimationFrame(() => r(undefined)))
+  expect(scroller().scrollTop).toBe(0)
 })
