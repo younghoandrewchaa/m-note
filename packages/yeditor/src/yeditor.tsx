@@ -295,6 +295,8 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
     onSaveRef.current = onSave
     onImageUploadRef.current = onImageUpload
     onImageUploadErrorRef.current = onImageUploadError
+    const onOpenLinkRef = useRef(onOpenLink)
+    onOpenLinkRef.current = onOpenLink
 
     const hasImageUpload = !!onImageUpload
 
@@ -308,6 +310,17 @@ export const YEditor = forwardRef<YEditorHandle, YEditorProps>(
             autocapitalize: "off",
             "aria-label": ariaLabel,
             class: "simple-editor",
+          },
+          // Cmd+click (Ctrl+click elsewhere) opens a link; runs before the link
+          // extension's click-to-select handler.
+          handleClick: (view, _pos, event) => {
+            if (event.button !== 0 || !(event.metaKey || event.ctrlKey)) return false
+            const link = (event.target as HTMLElement | null)?.closest?.("a")
+            const href = link?.getAttribute("href")
+            if (!link || !href || !view.dom.contains(link)) return false
+            event.preventDefault()
+            ;(onOpenLinkRef.current ?? defaultOpenLink)(href)
+            return true
           },
         },
         extensions: [

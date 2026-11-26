@@ -520,3 +520,32 @@ it("toggling onImageUpload keeps the editor, its edits and calls onReady once", 
   expect(onReady).toHaveBeenCalledOnce()
   expect(host.querySelector('[aria-label="Add image"]')).not.toBeNull()
 })
+
+function clickLink(ref: RefObject<YEditorHandle>, init: MouseEventInit) {
+  const view = ref.current.editor!.view
+  const anchor = view.dom.querySelector("a")!
+  const pos = view.posAtDOM(anchor.firstChild!, 1)
+  const event = new MouseEvent("click", { button: 0, ...init })
+  Object.defineProperty(event, "target", { value: anchor })
+  return view.someProp("handleClick", (f) => f(view, pos, event))
+}
+
+it("opens a link with cmd+click via onOpenLink, keeping relative hrefs", async () => {
+  const onOpenLink = vi.fn()
+  const ref = await renderEditor({ onOpenLink, initialValue: "see [notes](./other.md) here" })
+  let handled: boolean | void = undefined
+  act(() => {
+    handled = clickLink(ref, { metaKey: true })
+  })
+  expect(handled).toBe(true)
+  expect(onOpenLink).toHaveBeenCalledWith("./other.md")
+})
+
+it("does not open a link on a plain click", async () => {
+  const onOpenLink = vi.fn()
+  const ref = await renderEditor({ onOpenLink, initialValue: "see [site](https://a.com) here" })
+  act(() => {
+    clickLink(ref, {})
+  })
+  expect(onOpenLink).not.toHaveBeenCalled()
+})
