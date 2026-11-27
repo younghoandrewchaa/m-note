@@ -7,6 +7,11 @@ import { CheckUpdateButton } from "@/desktop-toolbar/check-update-button"
 import { ThemeToggle } from "@/theme-toggle"
 import { handleFileDrop } from "@/handle-file-drop"
 import {
+  restoreScrollTop,
+  saveScrollPosition,
+  takeScrollPosition,
+} from "@/scroll-restore"
+import {
   isLocalMarkdownLink,
   resolveLocalMarkdownPath,
 } from "@/lib/local-markdown-link"
@@ -16,6 +21,7 @@ import {
   runEditorTask,
   sanitizeUrl,
   setEditorUpdateFrozen,
+  type Editor,
   type YEditorHandle,
 } from "@younghoandrewchaa/yeditor"
 
@@ -31,6 +37,10 @@ export function openNoteLink(url: string, currentFilePath: string | null): void 
   }
   const safeUrl = sanitizeUrl(url, window.location.href)
   if (safeUrl !== "#") void window.electronAPI?.openExternal(safeUrl)
+}
+
+function scrollContainer(editor: Editor): HTMLElement | null {
+  return editor.view.dom.closest<HTMLElement>(".yeditor")
 }
 
 export function NoteEditor() {
@@ -132,9 +142,27 @@ export function NoteEditor() {
         const { content } = await window.electronAPI.readFile(filePath)
         handle.setMarkdown(content)
         markClean(filePath)
+        // After a Cmd+R reload, return to where the reader was.
+        const scrollTop = takeScrollPosition(filePath)
+        const scroller = scrollContainer(editor)
+        if (scrollTop !== undefined && scroller) {
+          restoreScrollTop(scroller, editor.view.dom, scrollTop)
+        }
       })
     })
   }, [handle, markClean])
+
+  useEffect(() => {
+    const editor = handle?.editor
+    if (!editor) return
+    const handleBeforeUnload = () => {
+      const path = currentFilePathRef.current
+      const scroller = scrollContainer(editor)
+      if (path && scroller) saveScrollPosition(path, scroller.scrollTop)
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [handle])
 
   useEffect(() => {
     const editor = handle?.editor
