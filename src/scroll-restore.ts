@@ -23,3 +23,44 @@ export function takeScrollPosition(filePath: string): number | undefined {
     return undefined
   }
 }
+
+const USER_INPUT = ["wheel", "touchstart", "pointerdown", "keydown"] as const
+
+/**
+ * Scrolls `scroller` to `target` on the next frame. Images and diagrams that
+ * size late can leave the page too short at first, so the position is
+ * re-applied whenever `content` resizes, until it is reached, the user
+ * scrolls or types, or `settleMs` passes. Returns a function that stops it.
+ */
+export function restoreScrollTop(
+  scroller: HTMLElement,
+  content: HTMLElement,
+  target: number,
+  settleMs = 3000,
+): () => void {
+  let done = false
+  const observer =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => apply())
+  const timer = setTimeout(() => stop(), settleMs)
+
+  function stop() {
+    if (done) return
+    done = true
+    observer?.disconnect()
+    clearTimeout(timer)
+    for (const type of USER_INPUT) scroller.removeEventListener(type, stop)
+  }
+
+  function apply() {
+    if (done) return
+    scroller.scrollTop = target
+    if (scroller.scrollTop >= target - 1) stop()
+  }
+
+  for (const type of USER_INPUT) scroller.addEventListener(type, stop, { passive: true })
+  requestAnimationFrame(() => {
+    apply()
+    if (!done) observer?.observe(content)
+  })
+  return stop
+}

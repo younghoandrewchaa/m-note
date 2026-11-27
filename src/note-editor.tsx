@@ -6,7 +6,11 @@ import { CopyFilePathButton } from "@/desktop-toolbar/copy-file-path-button"
 import { CheckUpdateButton } from "@/desktop-toolbar/check-update-button"
 import { ThemeToggle } from "@/theme-toggle"
 import { handleFileDrop } from "@/handle-file-drop"
-import { saveScrollPosition, takeScrollPosition } from "@/scroll-restore"
+import {
+  restoreScrollTop,
+  saveScrollPosition,
+  takeScrollPosition,
+} from "@/scroll-restore"
 import {
   isLocalMarkdownLink,
   resolveLocalMarkdownPath,
@@ -142,9 +146,7 @@ export function NoteEditor() {
         const scrollTop = takeScrollPosition(filePath)
         const scroller = scrollContainer(editor)
         if (scrollTop !== undefined && scroller) {
-          requestAnimationFrame(() => {
-            scroller.scrollTop = scrollTop
-          })
+          restoreScrollTop(scroller, editor.view.dom, scrollTop)
         }
       })
     })
