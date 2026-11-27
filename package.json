@@ -46,7 +46,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "42.11.16",
     "electron-mac-release": "1.0.1",
-    "encoding": "^0.1.13",
+    "encoding": "^0.1.14",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.10.1",
     "eslint-plugin-import": "^2.32.0",
